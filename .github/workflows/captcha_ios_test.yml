@@ -1,0 +1,96 @@
+name: iOS captcha test build
+
+on:
+  push:
+    branches:
+      - codex/fix-ios-captcha-refresh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-captcha-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'ngbyspy/PiliPlus'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml
+
+      - name: Prepare version
+        shell: pwsh
+        run: lib/scripts/build.ps1
+
+      - name: Apply iOS and SDK patches
+        shell: pwsh
+        run: lib/scripts/patch.ps1 iOS
+
+      - name: Analyze captcha changes
+        run: >-
+          dart analyze
+          lib/models/login/captcha_config.dart
+          lib/http/login.dart
+          lib/pages/login/controller.dart
+          test/pages/login/geetest/captcha_config_test.dart
+
+      - name: Run captcha regression tests
+        run: flutter test --no-pub test/pages/login/geetest/captcha_config_test.dart
+
+      - name: Build unsigned test IPA
+        run: |
+          flutter build ios --release --no-codesign --dart-define-from-file=pili_release.json --no-pub
+          mkdir -p captcha-output/Payload
+          ditto build/ios/iphoneos/Runner.app captcha-output/Payload/Runner.app
+          find captcha-output/Payload/Runner.app/Frameworks -type d -name '*.framework' -exec codesign --force --sign - --preserve-metadata=identifier,entitlements {} \;
+          (cd captcha-output && zip -qr "../PiliPlus_ios_${version}_captcha-test.ipa" Payload/Runner.app)
+
+      - name: Verify and record test IPA
+        run: |
+          flutter --version --machine > flutter-sdk.json
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, plistlib, zipfile
+          ipa = next(pathlib.Path('.').glob('PiliPlus_ios_*_captcha-test.ipa'))
+          with zipfile.ZipFile(ipa) as archive:
+              info = plistlib.loads(archive.read('Payload/Runner.app/Info.plist'))
+              binary = archive.read('Payload/Runner.app/Frameworks/App.framework/App')
+              assert info['CFBundleIdentifier'] == 'com.example.piliplus'
+              assert int(info['CFBundleVersion']) > 5598
+              assert b'resolveLoginCaptcha' in binary
+              assert any(name.startswith('Payload/Runner.app/GT3Captcha.bundle/') for name in archive.namelist())
+          digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+          report = {
+              'commit': os.environ['GITHUB_SHA'],
+              'runId': os.environ['GITHUB_RUN_ID'],
+              'file': ipa.name,
+              'sha256': digest,
+              'size': ipa.stat().st_size,
+              'bundleId': info['CFBundleIdentifier'],
+              'version': info['CFBundleShortVersionString'],
+              'build': info['CFBundleVersion'],
+              'flutter': json.loads(pathlib.Path('flutter-sdk.json').read_text()),
+              'signing': 'no Apple signing credentials; frameworks ad-hoc signed',
+              'deviceTest': False,
+          }
+          pathlib.Path('captcha-build-info.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps(report, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: iOS-captcha-test
+          path: |
+            PiliPlus_ios_*_captcha-test.ipa
+            captcha-build-info.json
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kitId": "ngbyspy-piliplus-private",
+  "platform": "windows",
+  "requiredFlutterVersion": "3.47.0",
+  "upstreamRemote": "upstream",
+  "upstreamRef": "upstream/main",
+  "contributionCheckout": "D:\\Projects\\PiliPlus",
+  "generatedWorktreePrefix": "PiliPlus-private-build-",
+  "moduleDestination": "lib/private/cache_exporter",
+  "testDestination": "test/private_cache_exporter"
+}

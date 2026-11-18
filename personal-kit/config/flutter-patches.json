@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "platform": "windows",
+  "lastVerifiedUpstreamCommit": "c9871e9a876cb609f294550ffa1248b38be4c681",
+  "flutterFrameworkCommit": "4cf24164269a5ebf0c16a028a00727d0e77bbb05",
+  "upstreamPatchDriver": {
+    "path": "lib/scripts/patch.ps1",
+    "sha256": "99ba34c71c845af0e2bba8dcd4885991621e362b557d674c3f2126b293b84d39"
+  },
+  "patches": [
+    { "path": "lib/scripts/modal_barrier.patch", "sha256": "02cc75221e00a2995e4fb1bfad5a719c8974c0e072c6f227e8412bc3425820aa" },
+    { "path": "lib/scripts/text_selection.patch", "sha256": "af9aae78a7f3617e5fd5d9d0f9ae8e561669d16b5138152757253261d232c708" },
+    { "path": "lib/scripts/mouse_cursor.patch", "sha256": "3c1870f06a89c47bd77f7106fc164395c87a3b619db72e4095e349ac1c02659b" },
+    { "path": "lib/scripts/image_anim.patch", "sha256": "82d42168a8ca4422c88760b524a08a96e811d9350937bd205d96d3122d124031" },
+    { "path": "lib/scripts/layout_builder.patch", "sha256": "117eab22f78cf4903a2cb5367c0f7285a4eb423540e29d30ad6248e80ed6078a" },
+    { "path": "lib/scripts/navigation_drawer.patch", "sha256": "28f65822f5698de9b29856ad38f10e12ac130e1b4a65b7f0bda6420dc1aa801e" },
+    { "path": "lib/scripts/popup_menu.patch", "sha256": "65fe5ffc47ff5c0cb3eff02b5271d905178c3600d1d7892bb35fb4c906c278e8" },
+    { "path": "lib/scripts/fab.patch", "sha256": "352823beaa99adcaadf707d9375887775175f7183ebee2270e9c6d156af9b516" },
+    { "path": "lib/scripts/null_safety_for_selectable_region.patch", "sha256": "748af294c809a3eb773c0236b172705c0388fe1da4dfb0d1f87aa4871212077f" },
+    { "path": "lib/scripts/selectable_region.patch", "sha256": "98694af9ea2360171aa424a9a4ea9d1689919601e19ca2e824c74b2b786687cc" },
+    { "path": "lib/scripts/editable_text.patch", "sha256": "07a4eb95ced192c8ed18dc0ce672e2c57755e1cb0714aa13fbbfeb209f6094f8" },
+    { "path": "lib/scripts/text_field.patch", "sha256": "1e1897ecce4b910d546637b11b56faebaa25152800b1ff953966bcfe173890c3" },
+    { "path": "lib/scripts/scroll_position.patch", "sha256": "339729551163441086131c8ce3770354418bd29b81b6cc9f6eae5d30887e3b5c" },
+    { "path": "lib/scripts/scrollable.patch", "sha256": "54f152cc7a161b1c83b525a63088c08d7faa971793d444d17ade478b66585d24" },
+    { "path": "lib/scripts/scrollable_gesture.patch", "sha256": "00d7da506ea7fb39d79563a828fee11fcefbe5fae1072a1de6114f5ba58d3353" },
+    { "path": "lib/scripts/draggable_scrollable_sheet.patch", "sha256": "99556110326829a367e4a70a18d72a0ddd7a6e27c6d4f5ae5079e2130cd6ed3e" },
+    { "path": "lib/scripts/scaffold.patch", "sha256": "8a63304abf43c527562595fcd6a1cb77dccd05b90d31d3db9bbaa25bfd30d6b6" },
+    { "path": "lib/scripts/text.patch", "sha256": "9eea85e003e91bbeb86b427b18c8185e1b92256b1a316a3a3eaaac994593dad3" },
+    { "path": "lib/scripts/text_painter.patch", "sha256": "5de999cadfe6681fa7b15dbfc6bb092ce74205576814dbadd52ac22a1f5d66ae" },
+    { "path": "lib/scripts/sliver.patch", "sha256": "c7713c9e68cffff5db06b320aba20e355ccf45137721658ba84c8aeb18ebdfed" }
+  ]
+}

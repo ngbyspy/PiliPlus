@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "id": "download-entry-cache-export-import",
+      "version": 1,
+      "target": "lib/models_new/download/bili_download_entry_info.dart",
+      "lastVerifiedUpstreamCommit": "c9871e9a876cb609f294550ffa1248b38be4c681",
+      "anchor": "import 'package:PiliPlus/pages/common/multi_select/base.dart'\n    show MultiSelectData;",
+      "expectedMatches": 1,
+      "beginMarker": "// PILIPLUS_PRIVATE_CACHE_EXPORT_BEGIN import-v1",
+      "endMarker": "// PILIPLUS_PRIVATE_CACHE_EXPORT_END import-v1",
+      "diagnostic": "The download entry imports changed; re-inspect the selected upstream commit before updating this rule."
+    },
+    {
+      "id": "download-entry-cache-export-menu",
+      "version": 2,
+      "target": "lib/models_new/download/bili_download_entry_info.dart",
+      "lastVerifiedUpstreamCommit": "c9871e9a876cb609f294550ffa1248b38be4c681",
+      "anchor": "      itemBuilder: (_) => [",
+      "expectedMatches": 1,
+      "beginMarker": "// PILIPLUS_PRIVATE_CACHE_EXPORT_BEGIN menu-v2",
+      "endMarker": "// PILIPLUS_PRIVATE_CACHE_EXPORT_END menu-v2",
+      "diagnostic": "The completed-download popup menu changed; re-inspect the menu and update the narrow UI adapter rule."
+    }
+  ]
+}

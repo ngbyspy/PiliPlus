@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "flutter": {
+    "version": "3.47.0",
+    "frameworkCommit": "4cf24164269a5ebf0c16a028a00727d0e77bbb05",
+    "dartVersion": "3.13.0",
+    "archiveName": "flutter_windows_3.47.0-stable.zip",
+    "archiveSize": 1927280652,
+    "url": "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.47.0-stable.zip",
+    "sha256": "9f96d393cdfad05bea0b4b42c603ffda027af11adadc8e4cf3ac87e49110c1ca"
+  },
+  "ffmpeg": {
+    "version": "2026-08-09-git-6bbc22dc09-essentials",
+    "sourceCommit": "6bbc22dc09",
+    "archiveName": "ffmpeg-2026-08-09-git-6bbc22dc09-essentials_build.zip",
+    "url": "https://github.com/GyanD/codexffmpeg/releases/download/2026-08-09-git-6bbc22dc09/ffmpeg-2026-08-09-git-6bbc22dc09-essentials_build.zip",
+    "sha256": "506d4da23b76d97a508a47381210e31fc4d3e9d7ea97e9a1dc80eb9db82e98e3",
+    "license": "GPL-3.0-or-later",
+    "requiredFiles": [
+      "bin/ffmpeg.exe",
+      "bin/ffprobe.exe"
+    ]
+  }
+}

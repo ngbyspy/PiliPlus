@@ -1,0 +1,115 @@
+{
+  "flutterVersion": "3.47.9",
+  "frameworkCommit": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+  "dartVersion": "3.13.7",
+  "archiveUrl": "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.47.9-stable.zip",
+  "archiveSha256": "d8e2b5977e09082c6440f89dc1aa887b94c8fbcc3b39222797046295a3f68a9e",
+  "archiveSize": 1939451626,
+  "upstreamPatchDriverSha256": "fea59451256b100bcb16c47b4863ce8a208537adf4524cbd2edc2badb04739be",
+  "patches": [
+    {
+      "path": "lib/scripts/modal_barrier.patch",
+      "sha256": "acd81d8f627e51e2cfb25a2f0ca941aa7b8d9657cddb51c5e5d04c067734ae7c"
+    },
+    {
+      "path": "lib/scripts/text_selection.patch",
+      "sha256": "b313cde06733c2c533f5859796168a99ee97fa145cda4d0565cd6c372d2ae6d8"
+    },
+    {
+      "path": "lib/scripts/mouse_cursor.patch",
+      "sha256": "0b919f513047ab0f26d02a5a88cd8ea20ccabba839faf5eebcb50f033b5e08b2"
+    },
+    {
+      "path": "lib/scripts/image_anim.patch",
+      "sha256": "4bcfff476a8b39d19601f01a2914b989cf29037500ee78c1a7c93b8ccf4831ef"
+    },
+    {
+      "path": "lib/scripts/layout_builder.patch",
+      "sha256": "0768fe076da2445f469beb35ca5c9515a9baec8efac3eee2220752b09b8f3af0"
+    },
+    {
+      "path": "lib/scripts/navigation_drawer.patch",
+      "sha256": "1d666a7f79b4234747ffd3ab7a67c4616750a9694a98a421a7dc05794338ce67"
+    },
+    {
+      "path": "lib/scripts/popup_menu.patch",
+      "sha256": "5447ebc2e196d56a7a6e1734a862fce5ae0d9684171c047816718ef3e635e964"
+    },
+    {
+      "path": "lib/scripts/fab.patch",
+      "sha256": "753eeff0b0815470e589a9c3a94e567f15bb3581bf2d29c126aa01ce0438c0c8"
+    },
+    {
+      "path": "lib/scripts/null_safety_for_selectable_region.patch",
+      "sha256": "e065cf974a9a74ddfbb8447cf42061f011ca690c2272d2c82e7f9e8c12c672c1"
+    },
+    {
+      "path": "lib/scripts/selectable_region.patch",
+      "sha256": "72c9b63b76d03de8198c99c5acac56d3c4ebb8bbef90f836ff1d50895faacfc4"
+    },
+    {
+      "path": "lib/scripts/editable_text.patch",
+      "sha256": "1fc9c52fd9e3ddcbc23fcc80520d7065940c5f3f01f9cafab0d4ad4585d9a3d0"
+    },
+    {
+      "path": "lib/scripts/text_field.patch",
+      "sha256": "d48d3ee5c6337b08d63ec2b97d52cde697e698da64ac2fda7e2b65e3c0ffc118"
+    },
+    {
+      "path": "lib/scripts/scroll_position.patch",
+      "sha256": "bf746107a41d27a0b76a301f4aadde8ab3ac2a102887c3b27fa8faaf0e9ff674"
+    },
+    {
+      "path": "lib/scripts/scrollable.patch",
+      "sha256": "69f58082a1bc9a686d59fe84608f5ede93204c94e7c0d5b915332691281d1013"
+    },
+    {
+      "path": "lib/scripts/scrollable_gesture.patch",
+      "sha256": "8121b487b35062239ffaca37b4be4fb829d938b7894cece9db5378c729cf6a73"
+    },
+    {
+      "path": "lib/scripts/draggable_scrollable_sheet.patch",
+      "sha256": "57ce130ec30e9ae077273bf19f83a79d5699182c88942d804e3e0578feb19114"
+    },
+    {
+      "path": "lib/scripts/scaffold.patch",
+      "sha256": "ffd7b6214779ec6fa62a28680214cf99593e099e8b5b819282de38e44c877061"
+    },
+    {
+      "path": "lib/scripts/text.patch",
+      "sha256": "d6cbc31578bf5c32a0b33a09360ea8196d09eb1571e8cb3ccd3f050684344993"
+    },
+    {
+      "path": "lib/scripts/text_painter.patch",
+      "sha256": "4f4f8df0d63abc476ab427e7c236a8d193e618de5269b0f419d59fb1693b739e"
+    },
+    {
+      "path": "lib/scripts/sliver.patch",
+      "sha256": "481c5868ac42b0fce5059111b1ed3aa25fcc04a6072ed28f42bb38dfba9bc30e"
+    },
+    {
+      "path": "lib/scripts/refresh_indicator.patch",
+      "sha256": "34d98cd7fc1ae7fe1ad9ff99dbb36502c7877b99cb3f3a52c791d33e608cd38d"
+    },
+    {
+      "path": "lib/scripts/double_tap_gesture.patch",
+      "sha256": "85cf0e1f8205383d005eb8097be9fdff560a3b58878e6d0ae73763909f1ca638"
+    },
+    {
+      "path": "lib/scripts/media_query.patch",
+      "sha256": "ad626bbd8eb62160e3ff01f2b43335c49eb8a282334a6fb991a4e00645a7b089"
+    },
+    {
+      "path": "lib/scripts/bottom_sheet_android.patch",
+      "sha256": "bb3e278132b0d800987ae54852f470933370e992bafc45da89d6dea6476472c5"
+    },
+    {
+      "path": "lib/scripts/scroll_view.patch",
+      "sha256": "2d28351a290d762ce8d093da6c9d6ff6cc7e34053d487dd074bd826613b1c5ba"
+    },
+    {
+      "path": "lib/scripts/navigator.patch",
+      "sha256": "13f0d4e6da6a04848fba182846a2fa0d512d4380a5121d668dc44f629db7276c"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "module": "cache_exporter",
+  "destination": "lib/private/cache_exporter",
+  "runtimeDataPolicy": "No cookies, tokens, signed URLs, cache contents, or export destinations enter build reports.",
+  "boundaries": [
+    "cache scanner and compatibility diagnostics",
+    "export domain model",
+    "FFmpeg stream-copy backend",
+    "cover and atomic sidecar output",
+    "subtitle provider boundary and conversion",
+    "protobuf danmaku XML/ASS conversion",
+    "Windows destination, progress, cancellation and cleanup",
+    "single PiliPlus model/UI adapter"
+  ]
+}
+

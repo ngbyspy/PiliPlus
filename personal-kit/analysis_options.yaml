@@ -1,0 +1,4 @@
+# Keep private Dart sources byte-for-byte stable when they are copied into the
+# selected PiliPlus source tree and formatted there.
+formatter:
+  trailing_commas: preserve

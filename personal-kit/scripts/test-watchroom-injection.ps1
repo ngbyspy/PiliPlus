@@ -36,6 +36,20 @@ if ($build.platform -eq 'ios') {
         if (-not $rejected) { throw 'Unexpected iOS metadata was accepted' }
         if ([IO.File]::ReadAllText($plist) -cne $changedPlist) { throw 'Rejected iOS patch attempt modified the unexpected metadata' }
     } finally { [IO.File]::WriteAllText($plist,$expectedPlist,[Text.UTF8Encoding]::new($false)) }
+    foreach ($mode in @('Debug','Release')) {
+        $configuration = Join-Path $source "macos/Flutter/Flutter-$mode.xcconfig"
+        $originalConfiguration = [IO.File]::ReadAllText($configuration).Replace("`r`n","`n")
+        $include = '#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.' + $mode.ToLowerInvariant() + '.xcconfig"'
+        [IO.File]::WriteAllText($configuration,"$include`n$originalConfiguration",[Text.UTF8Encoding]::new($false))
+    }
+    & $injector -SourceRoot $source -BuildManifest $testManifest -VerifyOnly
+    $expectedConfiguration = [IO.File]::ReadAllText($configuration)
+    [IO.File]::WriteAllText($configuration,"$expectedConfiguration`nUNEXPECTED=1`n",[Text.UTF8Encoding]::new($false))
+    try {
+        $rejected = $false
+        try { & $injector -SourceRoot $source -BuildManifest $testManifest -VerifyOnly } catch { $rejected = $_.Exception.Message -like '*Unexpected Flutter CocoaPods configuration*' }
+        if (-not $rejected) { throw 'Unexpected CocoaPods configuration was accepted' }
+    } finally { [IO.File]::WriteAllText($configuration,$expectedConfiguration,[Text.UTF8Encoding]::new($false)) }
 }
 function Output-Fingerprint {
     $files = @(Get-GitOutput $source @('ls-files','--modified','--others','--exclude-standard')) -split "`n"
@@ -60,7 +74,7 @@ try {
 & $injector -SourceRoot $source -BuildManifest $testManifest -VerifyOnly
 Assert-FingerprintEqual $build.contributionFingerprint (Get-CheckoutFingerprint $build.contributionCheckout)
 $result = @{cleanInjection=$true;idempotentReinjection=$true;anchorDriftRejected=$true;missingModuleRejected=$true;contributionCheckoutUnchanged=$true;upstreamCommit=$build.upstreamCommit}
-if ($build.platform -eq 'ios') { $result.iosAppPatchDriftRejected = $true; $result.iosAppPatchReinjection = $true }
+if ($build.platform -eq 'ios') { $result.iosAppPatchDriftRejected = $true; $result.iosAppPatchReinjection = $true; $result.iosAutoConfigDriftRejected = $true }
 Write-JsonFile $result (Join-Path $kitRoot 'dist/watchroom/injection-tests.json')
 # The disposable fixture contains only this script's verified injection outputs.
 $verified = Assert-GeneratedWorktree $build.repoPath $source $build.upstreamCommit @($build.contributionCheckout,$build.personalKitWorktree,$build.generatedWorktree)

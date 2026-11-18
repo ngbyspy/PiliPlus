@@ -182,6 +182,16 @@ if ($manifest.platform -eq 'windows') {
 
 $allowed = @($rules.target | Sort-Object -Unique) + @('pubspec.lock','pubspec_overrides.yaml')
 if ($manifest.platform -eq 'ios') {
+    # Flutter pub get on macOS adds these CocoaPods includes, including when
+    # resolving dependencies for iOS. Accept only the SDK's exact migration.
+    foreach ($mode in @('Debug','Release')) {
+        $relative = "macos/Flutter/Flutter-$mode.xcconfig"
+        $original = (Get-GitOutput $source @('show',"$($manifest.upstreamCommit):$relative")).Replace("`r`n","`n")
+        $actual = [IO.File]::ReadAllText((Join-Path $source $relative)).Replace("`r`n","`n").TrimEnd([char]"`n")
+        $include = '#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.' + $mode.ToLowerInvariant() + '.xcconfig"'
+        if ($actual -cne $original -and $actual -cne "$include`n$original") { throw "Unexpected Flutter CocoaPods configuration: $relative" }
+        $allowed += $relative
+    }
     $iosConfig = Get-Content -LiteralPath (Join-Path $kitRoot 'config/watchroom-toolchain-ios.json') -Raw | ConvertFrom-Json
     foreach ($patch in $iosConfig.applicationPatches) {
         $root = if ($patch.origin -eq 'kit') { $kitRoot } else { $source }

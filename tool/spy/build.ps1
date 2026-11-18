@@ -78,10 +78,17 @@ try {
             $env:GRADLE_USER_HOME=Join-Path $context.cache 'gradle'
             New-Item -ItemType Directory -Path (Join-Path $env:GRADLE_USER_HOME 'init.d') -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
-            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false') + $common + @('--build-number',"$($context.release.androidVersionCode)")) $context.source
+            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidVersionCode)")) $context.source
+            $builtApk = Join-Path $context.source 'build/app/outputs/flutter-apk/app-release.apk'
+            $archive = [IO.Compression.ZipFile]::OpenRead($builtApk)
+            try {
+                $abis = @($archive.Entries | Where-Object FullName -Like 'lib/*/*.so' | ForEach-Object { ($_.FullName -split '/')[1] } | Sort-Object -Unique)
+                if ($abis.Count -ne 1 -or $abis[0] -cne 'arm64-v8a') { throw 'Release APK advertises unsupported native architectures' }
+                $report.architectures = $abis
+            } finally { $archive.Dispose() }
             $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$($context.release.displayVersion)-android-arm64.apk"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }
-            Copy-Item -LiteralPath (Join-Path $context.source 'build/app/outputs/flutter-apk/app-release.apk') -Destination $artifact
+            Copy-Item -LiteralPath $builtApk -Destination $artifact
             $report.signingKeystoreSha256=$identity.keystoreSha256
         }
         'iOS' {

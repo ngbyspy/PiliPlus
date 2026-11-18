@@ -26,7 +26,7 @@ Use commits, tags and source archives for old versions, not new dated project si
 
 ## Release evidence
 
-Publish the user's requested editions on `https://github.com/ngbyspy/PiliPlus/releases` with version tags and platform assets. The local Releases directory is staging and recovery storage. Include Windows portable ZIP, signed Android APK, and self-signable IPA when ready. Ready assets may be published first; append the remaining platform to the same release. Avoid indefinite cloud polling when the user chooses to report the CI outcome themselves.
+The requested release interface is LOCAL: `Releases/index.html` resembles GitHub Releases and links versioned platform files. Each version has Windows/Android/iPad directories and `_metadata` for reports, manifest and hashes. Keep technical details collapsed in the page. Register ready artifacts and append a later IPA to the same version; do not infer permission to publish a GitHub Release. The user will report the current iPad CI outcome, so do not continue polling that run unless asked.
 
 Pin Flutter and the upstream baseline, preserve verified platform patch chains, lock dependencies, run appropriate analysis/tests and build actual artifacts. CI success does not replace native acceptance.
 

@@ -14,8 +14,9 @@ $context = Get-SpyContext $SourceRoot $CacheRoot
 if (-not $ValidateOnly -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
+$registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly
 if (-not $OutputRoot) {
-    $OutputRoot = if ($ValidateOnly) { Join-Path $context.source ".spy-build/validation/$Platform" } else { Join-Path (Split-Path -Parent $context.source) "Releases/$($context.release.tag)" }
+    $OutputRoot = if ($ValidateOnly) { Join-Path $context.source ".spy-build/validation/$Platform" } else { Join-Path (Split-Path -Parent $context.source) ".build/release-staging/$($context.release.tag)/$Platform" }
 }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $reportPath = Join-Path $OutputRoot ("build-$($Platform.ToLowerInvariant()).json")
@@ -102,6 +103,7 @@ try {
     $report.artifact=@{path=$artifact;sha256=(Get-SpyHash $artifact);bytes=(Get-Item -LiteralPath $artifact).Length}
     $report.completedOn=[DateTimeOffset]::UtcNow.ToString('o')
     Write-SpyJson $report $reportPath
+    if ($registerLocalRelease) { & (Join-Path $PSScriptRoot 'register-release.ps1') -ReportPath $reportPath }
     Write-Output "SPY package ready: $artifact"
 } catch { $report.failure=$_.Exception.Message; Write-SpyJson $report $reportPath; throw }
 finally {

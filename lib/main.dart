@@ -91,7 +91,7 @@ Future<void> _initAppPath() async {
   if (Platform.isWindows) {
     appSupportDirPath = path.join(
       (await getApplicationSupportDirectory()).path,
-      'spy',
+      kReleaseMode ? 'spy' : 'spy-dev',
     );
     return;
   }
@@ -218,7 +218,8 @@ void main() async {
         ..minimumSize = DeviceUtils.desktopMinSize
         ..isVisibleInTaskbar = true
         ..title = Constants.appName;
-      if (Platform.isWindows) window.title = 'PiliPlus SPY';
+      if (Platform.isWindows)
+        window.title = kReleaseMode ? 'PiliPlus SPY' : 'PiliPlus SPY dev';
       if (useContentUnderTitleBar) window.setContentUnderTitleBar(true);
       if (Pref.isWindowMaximized) window.maximize();
       void show([_]) => window
@@ -321,10 +322,7 @@ class MyApp extends StatelessWidget {
         ),
         builder: _builder,
       ),
-      navigatorObservers: [
-        routeObserver,
-        FlutterSmartDialog.observer,
-      ],
+      navigatorObservers: [routeObserver, FlutterSmartDialog.observer],
       scrollBehavior: PlatformUtils.isDesktop
           ? const CustomScrollBehavior()
           : null,
@@ -358,10 +356,7 @@ class MyApp extends StatelessWidget {
       );
     }
     if (PlatformUtils.isDesktop) {
-      return BackDetector(
-        onBack: _onBack,
-        child: child,
-      );
+      return BackDetector(onBack: _onBack, child: child);
     }
     return child;
   }

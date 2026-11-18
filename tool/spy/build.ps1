@@ -14,7 +14,9 @@ $context = Get-SpyContext $SourceRoot $CacheRoot
 if (-not $ValidateOnly -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
-if (-not $OutputRoot) { $OutputRoot = Join-Path (Split-Path -Parent $context.source) "Releases/$($context.release.tag)" }
+if (-not $OutputRoot) {
+    $OutputRoot = if ($ValidateOnly) { Join-Path $context.source ".spy-build/validation/$Platform" } else { Join-Path (Split-Path -Parent $context.source) "Releases/$($context.release.tag)" }
+}
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $reportPath = Join-Path $OutputRoot ("build-$($Platform.ToLowerInvariant()).json")
 $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.commit;sourceDirty=[bool]$status;upstreamCommit=$context.release.upstreamCommit;release=$context.release;startedOn=[DateTimeOffset]::UtcNow.ToString('o');nativeAcceptance='accepted feature baseline; new SPY package identity pending installation';networkRecovery='deferred by user'}

@@ -1,5 +1,6 @@
-import 'dart:io' show Directory, File;
-import 'dart:io' as watchroomIo show Platform;
+import 'dart:io' show Directory, File, Platform;
+
+import 'package:flutter/foundation.dart' show kReleaseMode;
 
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -17,8 +18,13 @@ Future<Directory> _cacheDirectoryProvider() async {
     );
   }
   if (PlatformUtils.isDesktop) {
-    if (watchroomIo.Platform.isWindows) {
-      return Directory(path.join(tmpDirPath, 'PiliPlus-SPY'));
+    if (Platform.isWindows) {
+      return Directory(
+        path.join(
+          tmpDirPath,
+          kReleaseMode ? 'PiliPlus-SPY' : 'PiliPlus-SPY-dev',
+        ),
+      );
     }
     return Directory(path.join(tmpDirPath, Constants.appName));
   }

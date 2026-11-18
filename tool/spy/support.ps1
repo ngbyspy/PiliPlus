@@ -240,6 +240,37 @@ function Prepare-SpyAndroidNativeLibraries($Context) {
     $reports
 }
 
+function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk) {
+    $engine = Get-SpyGit $Sdk.root @('show',"$($Sdk.commit):bin/internal/engine.version")
+    if ($engine -notmatch '^[0-9a-f]{40}$' -or [IO.File]::ReadAllText((Join-Path $Sdk.root 'bin/internal/engine.version')).Trim() -cne $engine) { throw 'Flutter engine revision changed' }
+    $version = "1.0.0-$engine"
+    $root = Join-Path $Context.cache 'spy/flutter-maven'
+    $reports = @()
+    $curl = Join-Path (Split-Path -Parent (Split-Path -Parent (Get-Command git.exe).Source)) 'mingw64/bin/curl.exe'
+    foreach ($module in @('flutter_embedding_release','arm64_v8a_release')) {
+        foreach ($extension in @('pom','jar')) {
+            $relative = "io/flutter/$module/$version/$module-$version.$extension"
+            $path = Join-Path $root $relative
+            $stamp = "$path.verified.json"
+            New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+            if (-not (Test-Path -LiteralPath $stamp)) {
+                $headers = "$path.headers"
+                $url = "https://storage.googleapis.com/download.flutter.io/$relative"
+                Invoke-SpyNative $curl @('--http1.1','--fail','--silent','--show-error','--location','--retry','4','--retry-all-errors','--retry-delay','2','--connect-timeout','20','--max-time','180','--dump-header',$headers,'--output',$path,$url)
+                $expected = [regex]::Match([IO.File]::ReadAllText($headers),'(?im)^x-goog-hash:\s*md5=([A-Za-z0-9+/=]+)\s*$').Groups[1].Value
+                $actual = [Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $path -Algorithm MD5).Hash))
+                if (-not $expected -or $actual -cne $expected) { throw 'Official Flutter artifact transfer integrity mismatch' }
+                Write-SpyJson @{url=$url;sha256=(Get-SpyHash $path);googleStorageMd5=$expected;engineCommit=$engine;file=$relative} $stamp
+            }
+            $record = Get-Content -LiteralPath $stamp -Raw | ConvertFrom-Json
+            if ($record.engineCommit -cne $engine -or (Get-SpyHash $path) -cne $record.sha256) { throw 'Cached Flutter artifact changed' }
+            $reports += $record
+        }
+    }
+    $env:PILIPLUS_SPY_FLUTTER_MAVEN = $root
+    $reports
+}
+
 function Prepare-SpyIosSource($Context, [switch]$CheckOnly) {
     $config = Get-Content -LiteralPath (Join-Path $Context.source 'tool/spy/config/flutter-ios.json') -Raw | ConvertFrom-Json
     $fixture = Join-Path $Context.cache 'spy/ios-source-reference'

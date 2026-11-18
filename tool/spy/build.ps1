@@ -67,6 +67,7 @@ try {
         }
         'Android' {
             $report.nativeLibraries = @(Prepare-SpyAndroidNativeLibraries $context)
+            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk)
             $secrets = Join-Path (Split-Path -Parent $context.source) '.secrets'
             $identity = Get-Content -LiteralPath (Join-Path $secrets 'android-signing.json') -Raw | ConvertFrom-Json
             $key = Join-Path $secrets $identity.storeFile
@@ -99,4 +100,5 @@ try {
 finally {
     [IO.File]::WriteAllBytes((Join-Path $context.source 'pubspec.lock'),$originalLock)
     $env:PILIPLUS_SPY_KEY_PROPERTIES=$null
+    $env:PILIPLUS_SPY_FLUTTER_MAVEN=$null
 }

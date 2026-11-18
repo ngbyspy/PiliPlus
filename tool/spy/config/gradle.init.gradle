@@ -19,6 +19,16 @@ beforeSettings { s ->
     }
 }
 allprojects { p ->
+    def flutterMaven = System.getenv('PILIPLUS_SPY_FLUTTER_MAVEN')
+    if (flutterMaven) {
+        p.repositories.exclusiveContent {
+            forRepository { maven { url = uri(flutterMaven) } }
+            filter {
+                includeModule('io.flutter', 'flutter_embedding_release')
+                includeModule('io.flutter', 'arm64_v8a_release')
+            }
+        }
+    }
     p.buildscript.repositories {
         maven {
             url = uri('https://maven.aliyun.com/repository/google')

@@ -60,6 +60,9 @@ class HistoryItem extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN history-thumb-height-v1
+                  SizedBox(height: 100, child:
+// PILIPLUS_PRIVATE_WATCHROOM_END history-thumb-height-v1
                   AspectRatio(
                     aspectRatio: Style.aspectRatio,
                     child: LayoutBuilder(
@@ -90,6 +93,9 @@ class HistoryItem extends StatelessWidget {
                       },
                     ),
                   ),
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN history-thumb-height-end-v1
+                  ),
+// PILIPLUS_PRIVATE_WATCHROOM_END history-thumb-height-end-v1
                   const SizedBox(width: 10),
                   content(theme),
                 ],

@@ -74,6 +74,9 @@ import 'package:flutter/foundation.dart' show kDebugMode, clampDouble;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-pages-video-view-dart-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-pages-video-view-dart-v1
 import 'package:material_ui/material_ui.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
 
@@ -150,6 +153,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
 
     introController = _initIntroCtr();
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-page-attach-v1
+    _attachWatchroomPage();
+// PILIPLUS_PRIVATE_WATCHROOM_END room-page-attach-v1
 
     _setPlayCallBack();
 
@@ -337,6 +343,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       ?..removeStatusLister(playerListener)
       ..removePositionListener(positionListener);
 
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-page-detach-v1
+    _detachWatchroomPage();
+// PILIPLUS_PRIVATE_WATCHROOM_END room-page-detach-v1
     Get.delete<HorizontalMemberPageController>(
       tag: videoDetailController.heroTag,
     );
@@ -596,6 +605,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                       hitTestBehavior: .translucent,
                       controller: videoDetailController.tabCtr,
                       children: [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-portrait-tab-v1
+                        if (_showWatchroomTab) _watchroomPanel,
+// PILIPLUS_PRIVATE_WATCHROOM_END room-portrait-tab-v1
                         videoIntro(isHorizontal: false, needCtr: false),
                         if (videoDetailController.showReply)
                           videoReplyPanel(isNested: true),
@@ -806,6 +818,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                     child: tabBarView(
                       controller: videoDetailController.tabCtr,
                       children: [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-split-tab-v1
+                        if (_showWatchroomTab) _watchroomPanel,
+// PILIPLUS_PRIVATE_WATCHROOM_END room-split-tab-v1
                         videoIntro(
                           width: introWidth,
                           height: maxHeight,
@@ -869,6 +884,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                           child: tabBarView(
                             controller: videoDetailController.tabCtr,
                             children: [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-vertical-tab-v1
+                              if (_showWatchroomTab) _watchroomPanel,
+// PILIPLUS_PRIVATE_WATCHROOM_END room-vertical-tab-v1
                               if (videoDetailController.showReply)
                                 videoReplyPanel(),
                               if (_shouldShowSeasonPanel) seasonPanel,
@@ -957,6 +975,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                     child: tabBarView(
                       controller: videoDetailController.tabCtr,
                       children: [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-wide-tab-v1
+                        if (_showWatchroomTab) _watchroomPanel,
+// PILIPLUS_PRIVATE_WATCHROOM_END room-wide-tab-v1
                         if (videoDetailController.isFileSource)
                           localIntroPanel()
                         else if (showIntro)
@@ -1050,6 +1071,11 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   buildTabBar(needIndicator: false),
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-square-tabs-v1
+                  if (_showWatchroomTab)
+                    Expanded(child: _watchroomSquareTabs(bottomHeight))
+                  else
+// PILIPLUS_PRIVATE_WATCHROOM_END room-square-tabs-v1
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1293,6 +1319,101 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         : child;
   }
 
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-page-state-v1
+  final List<String> _watchroomTabs = [];
+  bool _watchroomRefreshPending = false;
+
+  bool get _showWatchroomTab =>
+      !videoDetailController.isFileSource &&
+      !videoDetailController.isUgc &&
+      WatchroomAdapter.instance.showsRoomFor(
+        heroTag, videoDetailController.epId, videoDetailController.seasonId,
+      );
+
+  void _attachWatchroomPage() {
+    WatchroomAdapter.instance
+      ..attachPage(heroTag, open: _openWatchroomPane, prepare: _prepareWatchroomPlayer)
+      ..addListener(_onWatchroomChanged);
+  }
+
+  void _detachWatchroomPage() {
+    WatchroomAdapter.instance
+      ..removeListener(_onWatchroomChanged)
+      ..detachPage(heroTag);
+  }
+
+  void _onWatchroomChanged() {
+    if (!mounted || _watchroomRefreshPending) return;
+    _watchroomRefreshPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _watchroomRefreshPending = false;
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _syncWatchroomTabs(List<String> tabs) {
+    if (_watchroomTabs.join('|') == tabs.join('|') &&
+        videoDetailController.tabCtr.length == tabs.length) return;
+    final previous = videoDetailController.tabCtr;
+    final index = RoomTabs.selectedIndex(_watchroomTabs, tabs, previous.index);
+    previous.dispose();
+    videoDetailController.tabCtr = TabController(
+      length: tabs.length, vsync: videoDetailController, initialIndex: index,
+    );
+    _watchroomTabs
+      ..clear()
+      ..addAll(tabs);
+  }
+
+  void _openWatchroomPane() {
+    if (!mounted || !_showWatchroomTab) return;
+    if (isFullScreen || videoDetailController.showVideoSheet) {
+      WatchroomAdapter.instance.showSidePanel(context);
+      return;
+    }
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_showWatchroomTab) return;
+      videoDetailController.tabCtr.animateTo(0);
+      if (isPortrait) videoDetailController.animToTop();
+    });
+  }
+
+  Future<void> _prepareWatchroomPlayer() async {
+    if (!mounted) return;
+    final player = videoDetailController.plPlayerController;
+    if (plPlayerController == null) {
+      plPlayerController = player;
+      player
+        ..addStatusLister(playerListener)
+        ..addPositionListener(positionListener);
+    }
+    if (player.videoPlayerController == null || !videoDetailController.videoState.value) {
+      if (videoDetailController.videoUrl == null) {
+        throw StateError('视频尚未加载完成，请稍后从放映厅入口返回');
+      }
+      videoDetailController.autoPlay = true;
+      await videoDetailController.playerInit(autoplay: false);
+    }
+    await WatchroomAdapter.instance.bind(
+      identity: heroTag, episodeId: videoDetailController.epId,
+      seasonId: videoDetailController.seasonId, player: player,
+    );
+  }
+
+  Widget get _watchroomPanel => WatchroomAdapter.instance.panel();
+
+  Widget _watchroomSquareTabs(double height) => tabBarView(
+    controller: videoDetailController.tabCtr,
+    children: [
+      _watchroomPanel,
+      videoIntro(width: maxWidth, height: height),
+      if (videoDetailController.showReply) videoReplyPanel(),
+      if (_shouldShowSeasonPanel) seasonPanel,
+    ],
+  );
+// PILIPLUS_PRIVATE_WATCHROOM_END room-page-state-v1
   Widget buildTabBar({
     bool needIndicator = true,
     String? introText,
@@ -1300,11 +1421,17 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     VoidCallback? onTap,
   }) {
     final tabs = [
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-tab-title-v1
+      if (_showWatchroomTab) '放映厅',
+// PILIPLUS_PRIVATE_WATCHROOM_END room-tab-title-v1
       if (showIntro)
         videoDetailController.isFileSource ? '离线视频' : introText ?? '简介',
       if (videoDetailController.showReply) '评论',
       if (_shouldShowSeasonPanel) '播放列表',
     ];
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-tab-controller-v1
+    _syncWatchroomTabs(tabs);
+// PILIPLUS_PRIVATE_WATCHROOM_END room-tab-controller-v1
     if (videoDetailController.tabCtr.length != tabs.length) {
       videoDetailController.tabCtr.dispose();
       videoDetailController.tabCtr = TabController(

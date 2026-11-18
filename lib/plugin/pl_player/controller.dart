@@ -59,6 +59,9 @@ import 'package:flutter/services.dart'
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-plugin-pl_player-controller-dart-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-plugin-pl_player-controller-dart-v1
 import 'package:hive_ce/hive.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:media_kit/media_kit.dart';
@@ -1053,6 +1056,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         for (final element in _statusListeners) {
           element(playing ? .playing : .paused);
         }
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN native-playing-state-v1
+        WatchroomAdapter.instance.observeNativeState(this);
+// PILIPLUS_PRIVATE_WATCHROOM_END native-playing-state-v1
 
         final seconds = videoPlayerController!.state.position.inSeconds;
         if (seconds != 0) {
@@ -1189,6 +1195,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     try {
       await _videoPlayerController?.seek(position);
       _updateIOSPip(position);
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN seek-event-v1
+      WatchroomAdapter.instance.observe(this, 'seek');
+// PILIPLUS_PRIVATE_WATCHROOM_END seek-event-v1
     } catch (e) {
       if (kDebugMode) debugPrint('seek failed: $e');
     }
@@ -1230,12 +1239,18 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     audioSessionHandler?.setActive(true);
 
     playerStatus = .playing;
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN play-event-v1
+    WatchroomAdapter.instance.observe(this, 'play');
+// PILIPLUS_PRIVATE_WATCHROOM_END play-event-v1
   }
 
   /// 暂停播放
   Future<void> pause({bool notify = true, bool isInterrupt = false}) async {
     await _videoPlayerController?.pause();
     playerStatus = .paused;
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pause-event-v1
+    WatchroomAdapter.instance.observe(this, 'pause');
+// PILIPLUS_PRIVATE_WATCHROOM_END pause-event-v1
 
     // 主动暂停时让出音频焦点
     if (!isInterrupt) {
@@ -1851,6 +1866,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   void onPopInvokedWithResult(bool didPop, Object? result) {
     if (didPop) {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-pop-pause-v1
+      WatchroomAdapter.instance.onPlayerExit(this);
+// PILIPLUS_PRIVATE_WATCHROOM_END room-pop-pause-v1
       if (playerStatus.isPlaying) {
         pause();
       }

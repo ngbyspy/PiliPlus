@@ -39,7 +39,8 @@ try {
     Invoke-SpyNative $sdk.executable $arguments $context.source
     $report.uiDependencies = @(Prepare-SpyDependencies $context $Platform)
     Invoke-SpyNative $sdk.executable @('pub','get','--offline') $context.source
-    Assert-SpyDependencyLock $lock (Join-Path $context.source 'pubspec.lock')
+    $pathPackages = @('material_ui','cupertino_ui');if ($Platform -eq 'Android') { $pathPackages += 'flutter_inappwebview_android' }
+    Assert-SpyDependencyLock $lock (Join-Path $context.source 'pubspec.lock') $pathPackages
     $report.resolvedLockSha256 = Get-SpyHash (Join-Path $context.source 'pubspec.lock')
     $paths = @('lib/features/watchroom','test/watchroom','lib/common/constants.dart','lib/main.dart','lib/utils/cache_manager.dart','lib/utils/desktop/window_controller.dart','lib/pages/mine/view.dart','lib/utils/app_scheme.dart','lib/pages/video/controller.dart','lib/pages/video/view.dart','lib/pages/video/introduction/pgc/view.dart','lib/pages/video/introduction/pgc/controller.dart','lib/models_new/pgc/pgc_info_model/result.dart','lib/plugin/pl_player/controller.dart','lib/pages/video/widgets/header_control.dart','lib/pages/video/widgets/player_focus.dart','lib/pages/history/view.dart','lib/pages/history/widgets/item.dart')
     Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + $paths) $context.source
@@ -65,6 +66,7 @@ try {
             Compress-Archive -Path (Join-Path $bundle '*') -DestinationPath $artifact
         }
         'Android' {
+            $report.nativeLibraries = @(Prepare-SpyAndroidNativeLibraries $context)
             $secrets = Join-Path (Split-Path -Parent $context.source) '.secrets'
             $identity = Get-Content -LiteralPath (Join-Path $secrets 'android-signing.json') -Raw | ConvertFrom-Json
             $key = Join-Path $secrets $identity.storeFile

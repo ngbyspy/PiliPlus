@@ -3,6 +3,9 @@
 基于 PiliPlus 的个人发行版，包含与 B 站官方网页、客户端互通的放映厅功能。
 当前功能基线已在 Android、Windows、iPad 完成人工验收。
 
+发行源码：[spy/main](https://github.com/ngbyspy/PiliPlus/tree/spy/main)。
+上游放映厅贡献：[Draft PR #3679](https://github.com/bggRGjQaUbCoE/PiliPlus/pull/3679)，关联 #3639。
+
 维护采用固定的三个源码目录：
 
 | 目录 | 分支 | 用途 |
@@ -27,6 +30,10 @@ PowerShell 7：
 Flutter 版本、框架补丁和依赖提交均固定并经过检查。首次 Android 发行通过
 `tool/spy/init-signing.ps1` 创建自己的稳定签名，随后版本必须保留同一签名；密钥及其
 独立备份仅保存在本机，不上传到 GitHub。
+
+Windows、Android 构建共用生成的依赖配置，须串行执行。开发时可在 `spy/dev`
+使用 `-ValidateOnly`，报告放在源码目录的 `.spy-build/validation`；发行包只允许从
+干净的 `spy/main` 构建。Windows 调试配置和 iOS Debug 标识与正式版隔离。
 
 iPad 使用 `.github/workflows/spy-ipad.yml` 的 GitHub macOS 构建，生成待自签的
 arm64 IPA。没有 Apple 证书也可以完成构建，安装由用户自行签名。

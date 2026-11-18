@@ -157,3 +157,5 @@ test*
 .spy-build/
 pubspec_overrides.yaml
 .secrets/
+!/tool/spy/tests/
+!/tool/spy/tests/**

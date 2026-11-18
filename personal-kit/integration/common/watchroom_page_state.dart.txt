@@ -1,0 +1,93 @@
+  final List<String> _watchroomTabs = [];
+  bool _watchroomRefreshPending = false;
+
+  bool get _showWatchroomTab =>
+      !videoDetailController.isFileSource &&
+      !videoDetailController.isUgc &&
+      WatchroomAdapter.instance.showsRoomFor(
+        heroTag, videoDetailController.epId, videoDetailController.seasonId,
+      );
+
+  void _attachWatchroomPage() {
+    WatchroomAdapter.instance
+      ..attachPage(heroTag, open: _openWatchroomPane, prepare: _prepareWatchroomPlayer)
+      ..addListener(_onWatchroomChanged);
+  }
+
+  void _detachWatchroomPage() {
+    WatchroomAdapter.instance
+      ..removeListener(_onWatchroomChanged)
+      ..detachPage(heroTag);
+  }
+
+  void _onWatchroomChanged() {
+    if (!mounted || _watchroomRefreshPending) return;
+    _watchroomRefreshPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _watchroomRefreshPending = false;
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _syncWatchroomTabs(List<String> tabs) {
+    if (_watchroomTabs.join('|') == tabs.join('|') &&
+        videoDetailController.tabCtr.length == tabs.length) return;
+    final previous = videoDetailController.tabCtr;
+    final index = RoomTabs.selectedIndex(_watchroomTabs, tabs, previous.index);
+    previous.dispose();
+    videoDetailController.tabCtr = TabController(
+      length: tabs.length, vsync: videoDetailController, initialIndex: index,
+    );
+    _watchroomTabs
+      ..clear()
+      ..addAll(tabs);
+  }
+
+  void _openWatchroomPane() {
+    if (!mounted || !_showWatchroomTab) return;
+    if (isFullScreen || videoDetailController.showVideoSheet) {
+      WatchroomAdapter.instance.showSidePanel(context);
+      return;
+    }
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_showWatchroomTab) return;
+      videoDetailController.tabCtr.animateTo(0);
+      if (isPortrait) videoDetailController.animToTop();
+    });
+  }
+
+  Future<void> _prepareWatchroomPlayer() async {
+    if (!mounted) return;
+    final player = videoDetailController.plPlayerController;
+    if (plPlayerController == null) {
+      plPlayerController = player;
+      player
+        ..addStatusLister(playerListener)
+        ..addPositionListener(positionListener);
+    }
+    if (player.videoPlayerController == null || !videoDetailController.videoState.value) {
+      if (videoDetailController.videoUrl == null) {
+        throw StateError('视频尚未加载完成，请稍后从放映厅入口返回');
+      }
+      videoDetailController.autoPlay = true;
+      await videoDetailController.playerInit(autoplay: false);
+    }
+    await WatchroomAdapter.instance.bind(
+      identity: heroTag, episodeId: videoDetailController.epId,
+      seasonId: videoDetailController.seasonId, player: player,
+    );
+  }
+
+  Widget get _watchroomPanel => WatchroomAdapter.instance.panel();
+
+  Widget _watchroomSquareTabs(double height) => tabBarView(
+    controller: videoDetailController.tabCtr,
+    children: [
+      _watchroomPanel,
+      videoIntro(width: maxWidth, height: height),
+      if (videoDetailController.showReply) videoReplyPanel(),
+      if (_shouldShowSeasonPanel) seasonPanel,
+    ],
+  );

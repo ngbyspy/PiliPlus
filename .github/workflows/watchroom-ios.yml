@@ -1,0 +1,88 @@
+name: Watchroom iPad self-signable IPA
+
+on:
+  push:
+    branches: [personal/main]
+    paths:
+      - .github/workflows/watchroom-ios.yml
+      - personal-kit/config/watchroom-toolchain-ios.json
+      - personal-kit/modules/watchroom/**
+      - personal-kit/integration/common/**
+      - personal-kit/integration/ios/**
+      - personal-kit/scripts/**
+      - personal-kit/tests/watchroom/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: watchroom-ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'ngbyspy/PiliPlus' && github.ref == 'refs/heads/personal/main'
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      COCOAPODS_DISABLE_STATS: 'true'
+      PUB_ENVIRONMENT: github-actions
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.9'
+          cache: false
+
+      - name: Create isolated upstream worktree
+        shell: pwsh
+        run: |
+          git remote add upstream https://github.com/bggRGjQaUbCoE/PiliPlus.git
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot configure authoritative upstream' }
+          ./personal-kit/scripts/new-watchroom-ios-source.ps1 `
+            -RepoPath $env:GITHUB_WORKSPACE -PersonalKitWorktree $env:GITHUB_WORKSPACE `
+            -SourceRoot (Join-Path $env:RUNNER_TEMP 'PiliPlus-watchroom-ios') `
+            -BuildManifest ./personal-kit/dist/watchroom/build-manifest-ios.json `
+            -BuildId "watchroom-ios-${{ github.run_number }}-${{ github.run_attempt }}"
+
+      - name: Check guarded injection
+        shell: pwsh
+        run: |
+          python3 -m unittest discover -s personal-kit/tests -p test_ios_package.py
+          if ($LASTEXITCODE -ne 0) { throw 'IPA verification tests failed' }
+          ./personal-kit/scripts/test-watchroom-injection.ps1 -BuildManifest ./personal-kit/dist/watchroom/build-manifest-ios.json
+
+      - name: Test and build unsigned IPA
+        shell: pwsh
+        run: |
+          ./personal-kit/scripts/build-watchroom-ios.ps1 `
+            -BuildManifest ./personal-kit/dist/watchroom/build-manifest-ios.json -SdkRoot $env:FLUTTER_ROOT
+
+      - name: Upload IPA and verification reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: watchroom-ipad-self-signable-${{ github.run_number }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            personal-kit/dist/watchroom/ios/**/*.ipa
+            personal-kit/dist/watchroom/ios/**/ipa-verification.json
+            personal-kit/dist/watchroom/ios/**/build-manifest.json
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: watchroom-ipad-diagnostics-${{ github.run_number }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            personal-kit/dist/watchroom/build-manifest-ios.json
+            personal-kit/dist/watchroom/injection-tests.json

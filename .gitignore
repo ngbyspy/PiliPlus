@@ -1,0 +1,5 @@
+personal-kit/dist/
+personal-kit/.cache/
+personal-kit/.state/
+__pycache__/
+*.py[cod]

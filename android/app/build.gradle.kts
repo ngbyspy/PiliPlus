@@ -70,6 +70,11 @@ android {
             signingConfig = config ?: signingConfigs["debug"]
         }
         release {
+            // SPY currently distributes an ARM64 APK; native dependency JARs
+            // also contain other ABIs without a matching Flutter application.
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
             if (project.hasProperty("dev")) {
                 applicationIdSuffix = ".dev"
                 resValue(

@@ -13,9 +13,7 @@ import 'package:PiliPlus/models_new/pgc/pgc_info_model/user_status.dart';
 import 'package:collection/collection.dart';
 
 class PgcInfoModel {
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-room-capability-field-v1
   bool? supportsWatchroom;
-// PILIPLUS_PRIVATE_WATCHROOM_END pgc-room-capability-field-v1
   String? actors;
   List<Area>? areas;
   String? cover;
@@ -100,19 +98,15 @@ class PgcInfoModel {
     this.cooperators,
     this.brief,
     this.seasons,
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-room-capability-constructor-v1
     this.supportsWatchroom,
-// PILIPLUS_PRIVATE_WATCHROOM_END pgc-room-capability-constructor-v1
   });
 
   factory PgcInfoModel.fromJson(Map<String, dynamic> json) => PgcInfoModel(
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-room-capability-json-v1
     supportsWatchroom: switch ((json['freya'] as Map?)?['icon_show']) {
       1 || true => true,
       0 || false => false,
       _ => null,
     },
-// PILIPLUS_PRIVATE_WATCHROOM_END pgc-room-capability-json-v1
     actors: json['actors'] as String?,
     areas: (json['areas'] as List<dynamic>?)
         ?.map((e) => Area.fromJson(e as Map<String, dynamic>))

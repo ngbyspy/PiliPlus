@@ -25,9 +25,7 @@ import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-pages-video-introduction-pgc-view-dart-v1
-import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
-// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-pages-video-introduction-pgc-view-dart-v1
+import 'package:PiliPlus/features/watchroom/piliplus_adapter.dart';
 import 'package:material_ui/material_ui.dart';
 
 class PgcIntroPage extends StatefulWidget {
@@ -91,7 +89,6 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
           const SizedBox(height: 6),
           // 点赞收藏转发 布局样式2
           if (introController.isPgc) actionGrid(item.stat!, introController),
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-create-room-v1
           if (introController.isPgc)
             WatchroomAdapter.instance.creationCard(
               context,
@@ -101,7 +98,6 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
               supported: item.supportsWatchroom,
               title: item.title ?? '当前剧集',
             ),
-// PILIPLUS_PRIVATE_WATCHROOM_END pgc-create-room-v1
           if (isPortrait ||
               !videoDetailCtr.plPlayerController.horizontalSeasonPanel) ...[
             // seasons

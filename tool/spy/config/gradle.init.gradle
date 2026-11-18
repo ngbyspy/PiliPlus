@@ -1,0 +1,72 @@
+// Scoped to the private build's GRADLE_USER_HOME; no global Gradle changes.
+// Kotlin's relocatable incremental caches cannot span the C: pub cache and D:
+// generated checkout. This affects compilation caching only, not app behavior.
+gradle.startParameter.projectProperties = gradle.startParameter.projectProperties + ['kotlin.incremental': 'false']
+beforeSettings { s ->
+    s.pluginManagement.repositories {
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+        maven {
+            url = uri('https://maven.aliyun.com/repository/google')
+            content {
+                includeGroupByRegex('com\\.android(\\..*)?')
+                includeGroupByRegex('androidx(\\..*)?')
+                includeGroupByRegex('android\\.arch(\\..*)?')
+                includeGroupByRegex('com\\.google(\\..*)?')
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+allprojects { p ->
+    p.buildscript.repositories {
+        maven {
+            url = uri('https://maven.aliyun.com/repository/google')
+            content {
+                includeGroupByRegex('com\\.android(\\..*)?')
+                includeGroupByRegex('androidx(\\..*)?')
+                includeGroupByRegex('android\\.arch(\\..*)?')
+                includeGroupByRegex('com\\.google(\\..*)?')
+            }
+        }
+        maven { url = uri('https://maven.aliyun.com/repository/central') }
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+    }
+    // Flutter Android subprojects otherwise resolve many obsolete AGP/Kotlin
+    // classpaths even though the root project's plugin classes take precedence.
+    // Use exactly the plugin versions selected by this upstream Android build;
+    // do not alter the separate Flutter tools included build.
+    def settings = new File(p.rootProject.projectDir, 'settings.gradle.kts')
+    if (new File(p.rootProject.projectDir, 'app/build.gradle.kts').exists() && settings.exists()) {
+        p.repositories {
+            maven {
+                url = uri('https://maven.aliyun.com/repository/google')
+                content {
+                    includeGroupByRegex('com\\.android(\\..*)?')
+                    includeGroupByRegex('androidx(\\..*)?')
+                    includeGroupByRegex('android\\.arch(\\..*)?')
+                    includeGroupByRegex('com\\.google(\\..*)?')
+                }
+            }
+            maven { url = uri('https://maven.aliyun.com/repository/central') }
+        }
+        def text = settings.getText('UTF-8')
+        def agp = text =~ /id\("com.android.application"\) version "([^"]+)"/
+        def kotlin = text =~ /id\("org.jetbrains.kotlin.android"\) version "([^"]+)"/
+        if (agp.find() && kotlin.find()) {
+            def agpVersion = agp.group(1)
+            def kotlinVersion = kotlin.group(1)
+            p.buildscript.configurations.configureEach { config ->
+                config.resolutionStrategy.eachDependency { dependency ->
+                    if (dependency.requested.group == 'com.android.tools.build' && dependency.requested.name == 'gradle') {
+                        dependency.useVersion(agpVersion)
+                    }
+                    if (dependency.requested.group == 'org.jetbrains.kotlin' && dependency.requested.name == 'kotlin-gradle-plugin') {
+                        dependency.useVersion(kotlinVersion)
+                    }
+                }
+            }
+        }
+    }
+
+}

@@ -62,9 +62,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-pages-video-widgets-header_control-dart-v1
-import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
-// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-pages-video-widgets-header_control-dart-v1
+import 'package:PiliPlus/features/watchroom/piliplus_adapter.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -1723,17 +1721,16 @@ class HeaderControlState extends State<HeaderControl>
             right: Row(
               mainAxisSize: .min,
               children: [
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN player-room-button-v1
                 if (!isFileSource && !videoDetailCtr.isUgc)
                   WatchroomAdapter.instance.playerButton(
                     context,
                     identity: heroTag,
                     episodeId: videoDetailCtr.epId,
                     seasonId: videoDetailCtr.seasonId,
-                    supported: videoDetailCtr.pgcIntroCtr.pgcItem.supportsWatchroom,
+                    supported:
+                        videoDetailCtr.pgcIntroCtr.pgcItem.supportsWatchroom,
                     title: videoDetailCtr.pgcIntroCtr.pgcItem.title ?? '当前剧集',
                   ),
-// PILIPLUS_PRIVATE_WATCHROOM_END player-room-button-v1
                 // show current datetime
                 ...?timeBatteryWidgets,
                 if (PlatformUtils.isDesktop && !plPlayerController.isDesktopPip)

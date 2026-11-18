@@ -88,12 +88,13 @@ Future<void> _initTmpPath() async {
 }
 
 Future<void> _initAppPath() async {
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-test-profile-v1
   if (Platform.isWindows) {
-    appSupportDirPath = path.join((await getApplicationSupportDirectory()).path, 'watchroom-windows');
+    appSupportDirPath = path.join(
+      (await getApplicationSupportDirectory()).path,
+      'spy',
+    );
     return;
   }
-// PILIPLUS_PRIVATE_WATCHROOM_END windows-test-profile-v1
   appSupportDirPath = (await getApplicationSupportDirectory()).path;
 }
 
@@ -217,9 +218,7 @@ void main() async {
         ..minimumSize = DeviceUtils.desktopMinSize
         ..isVisibleInTaskbar = true
         ..title = Constants.appName;
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-test-title-v1
-      if (Platform.isWindows) window.title = 'PiliPlus 放映厅测试';
-// PILIPLUS_PRIVATE_WATCHROOM_END windows-test-title-v1
+      if (Platform.isWindows) window.title = 'PiliPlus SPY';
       if (useContentUnderTitleBar) window.setContentUnderTitleBar(true);
       if (Pref.isWindowMaximized) window.maximize();
       void show([_]) => window

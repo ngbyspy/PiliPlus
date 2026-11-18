@@ -1,0 +1,62 @@
+name: PiliPlus-SPY iPad IPA
+
+on:
+  push:
+    branches: [spy/main]
+    paths:
+      - .github/workflows/spy-ipad.yml
+      - lib/**
+      - ios/**
+      - test/watchroom/**
+      - tool/spy/**
+      - pubspec.yaml
+      - pubspec.lock
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spy-ipad-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'ngbyspy/PiliPlus' && github.ref == 'refs/heads/spy/main'
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      COCOAPODS_DISABLE_STATS: 'true'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.9'
+          cache: false
+      - name: Check packaging verifier
+        run: python3 -m unittest discover -s tool/spy/tests -p test_ios_package.py
+      - name: Validate and build device IPA
+        shell: pwsh
+        run: |
+          ./tool/spy/build.ps1 -Platform iOS -SdkRoot $env:FLUTTER_ROOT `
+            -OutputRoot (Join-Path $env:RUNNER_TEMP 'PiliPlus-SPY-output')
+      - uses: actions/upload-artifact@v7
+        with:
+          name: PiliPlus-SPY-ipad-${{ github.run_number }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/PiliPlus-SPY-output/ipad/*.ipa
+            ${{ runner.temp }}/PiliPlus-SPY-output/ipad/ipa-verification.json
+            ${{ runner.temp }}/PiliPlus-SPY-output/build-ios.json
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: PiliPlus-SPY-ipad-diagnostics-${{ github.run_number }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/PiliPlus-SPY-output/build-ios.json

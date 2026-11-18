@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:PiliPlus/private/watchroom/links.dart';
-import 'package:PiliPlus/private/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/links.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

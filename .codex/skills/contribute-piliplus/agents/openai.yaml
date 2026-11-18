@@ -1,0 +1,4 @@
+interface:
+  display_name: "Contribute to PiliPlus"
+  short_description: "按上游规范开发、验证并提交 PiliPlus PR"
+  default_prompt: "Use $contribute-piliplus to prepare a focused PiliPlus change and a standards-aligned pull request."

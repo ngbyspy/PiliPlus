@@ -1,0 +1,4 @@
+interface:
+  display_name: "PiliPlus-SPY 开发与发行"
+  short_description: "在固定的 PiliPlusAbout 工作区开发、验证并打包个人版本"
+  default_prompt: "Use $build-private-piliplus to develop and release PiliPlus-SPY in the three stable PiliPlusAbout source directories."

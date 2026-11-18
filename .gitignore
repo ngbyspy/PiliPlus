@@ -152,3 +152,8 @@ dist
 test*
 !/test/
 !/test/**
+
+# SPY machine-local build inputs and signing material
+.spy-build/
+pubspec_overrides.yaml
+.secrets/

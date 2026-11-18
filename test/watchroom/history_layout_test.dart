@@ -2,7 +2,7 @@ import 'package:PiliPlus/models_new/history/history.dart';
 import 'package:PiliPlus/models_new/history/list.dart';
 import 'package:PiliPlus/pages/common/multi_select/base.dart';
 import 'package:PiliPlus/pages/history/widgets/item.dart';
-import 'package:PiliPlus/private/watchroom/history_layout.dart';
+import 'package:PiliPlus/features/watchroom/history_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

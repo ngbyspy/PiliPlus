@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:PiliPlus/private/watchroom/model.dart';
-import 'package:PiliPlus/private/watchroom/session.dart';
-import 'package:PiliPlus/private/watchroom/wire.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/session.dart';
+import 'package:PiliPlus/features/watchroom/wire.dart';
 
 Map<String, dynamic> snapshot({
   int owner = 7,

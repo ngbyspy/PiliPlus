@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
-import 'package:PiliPlus/private/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/piliplus_adapter.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'host_test.dart' show HostTransport, newSession;

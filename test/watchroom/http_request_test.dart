@@ -1,5 +1,5 @@
-import 'package:PiliPlus/private/watchroom/http_request.dart';
-import 'package:PiliPlus/private/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/http_request.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

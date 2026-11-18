@@ -60,42 +60,39 @@ class HistoryItem extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN history-thumb-height-v1
-                  SizedBox(height: 100, child:
-// PILIPLUS_PRIVATE_WATCHROOM_END history-thumb-height-v1
-                  AspectRatio(
-                    aspectRatio: Style.aspectRatio,
-                    child: LayoutBuilder(
-                      builder: (context, boxConstraints) {
-                        double maxWidth = boxConstraints.maxWidth;
-                        double maxHeight = boxConstraints.maxHeight;
-                        return Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            NetworkImgLayer(
-                              src: item.cover?.isNotEmpty == true
-                                  ? item.cover
-                                  : item.covers?.firstOrNull ?? '',
-                              width: maxWidth,
-                              height: maxHeight,
-                            ),
-                            ?item.label,
-                            if (hasDuration)
-                              ...item.progressIndicator(theme.colorScheme),
-                            Positioned.fill(
-                              child: selectMask(
-                                theme.colorScheme,
-                                item.checked,
+                  SizedBox(
+                    height: 100,
+                    child: AspectRatio(
+                      aspectRatio: Style.aspectRatio,
+                      child: LayoutBuilder(
+                        builder: (context, boxConstraints) {
+                          double maxWidth = boxConstraints.maxWidth;
+                          double maxHeight = boxConstraints.maxHeight;
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              NetworkImgLayer(
+                                src: item.cover?.isNotEmpty == true
+                                    ? item.cover
+                                    : item.covers?.firstOrNull ?? '',
+                                width: maxWidth,
+                                height: maxHeight,
                               ),
-                            ),
-                          ],
-                        );
-                      },
+                              ?item.label,
+                              if (hasDuration)
+                                ...item.progressIndicator(theme.colorScheme),
+                              Positioned.fill(
+                                child: selectMask(
+                                  theme.colorScheme,
+                                  item.checked,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN history-thumb-height-end-v1
-                  ),
-// PILIPLUS_PRIVATE_WATCHROOM_END history-thumb-height-end-v1
                   const SizedBox(width: 10),
                   content(theme),
                 ],

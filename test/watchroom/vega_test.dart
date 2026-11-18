@@ -1,4 +1,4 @@
-import 'package:PiliPlus/private/watchroom/vega.dart';
+import 'package:PiliPlus/features/watchroom/vega.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

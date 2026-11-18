@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.piliplus"
+        applicationId = "com.ngbyspy.piliplus.spy"
         minSdk = flutter.minSdkVersion
         targetSdk = 37
         versionCode = flutter.versionCode
@@ -38,7 +38,7 @@ android {
     packagingOptions.jniLibs.useLegacyPackaging = true
 
     val keyProperties = Properties().also {
-        val properties = rootProject.file("key.properties")
+        val properties = rootProject.file(System.getenv("PILIPLUS_SPY_KEY_PROPERTIES") ?: "key.properties")
         if (properties.exists())
             it.load(properties.inputStream())
     }
@@ -54,10 +54,12 @@ android {
         }
     }
 
+    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } && config == null) {
+        error("SPY release signing key is missing. Build through tool/spy/build.ps1 with the preserved signing identity.")
+    }
+
     buildFeatures {
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN debug-resource-feature-v1
         resValues = true
-// PILIPLUS_PRIVATE_WATCHROOM_END debug-resource-feature-v1
         if (project.hasProperty("dev")) {
             resValues = true
         }
@@ -73,7 +75,7 @@ android {
                 resValue(
                     type = "string",
                     name = "app_name",
-                    value = "PiliPlus dev",
+                    value = "PiliPlus SPY dev",
                 )
             }
             proguardFiles(
@@ -83,9 +85,7 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN debug-app-name-v1
-            resValue("string", "app_name", "PiliPlus 放映室测试")
-// PILIPLUS_PRIVATE_WATCHROOM_END debug-app-name-v1
+            resValue("string", "app_name", "PiliPlus SPY debug")
         }
     }
 

@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
-import 'dart:io' show File, Platform, pid;
 import 'dart:math' as math;
 
 import 'package:PiliPlus/http/init.dart';
@@ -11,12 +9,10 @@ import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'model.dart';
 import 'links.dart';
@@ -108,23 +104,6 @@ class WatchroomAdapter extends ChangeNotifier with WidgetsBindingObserver {
   String chatDraft = '';
   WatchroomAdapter._() {
     WidgetsBinding.instance.addObserver(this);
-    if (kDebugMode && Platform.isAndroid) unawaited(_saveDebugEndpoint());
-  }
-
-  // Some devices omit the VM announcement from logcat. Keep only its local
-  // endpoint in this debug app's private cache so ADB can attach without
-  // reading account files or changing the device's logging configuration.
-  Future<void> _saveDebugEndpoint() async {
-    try {
-      final info = await developer.Service.getInfo();
-      if (info.serverUri == null) return;
-      final cache = await getTemporaryDirectory();
-      await File('${cache.path}/watchroom-vm-service.json').writeAsString(
-        jsonEncode({'pid': pid, 'url': '${info.serverUri}'}),
-      );
-    } catch (_) {
-      // Diagnostics must never prevent the actual room from opening.
-    }
   }
 
   Future<RoomSession> _ensureSession() async {

@@ -87,7 +87,8 @@ class PgcIntroController extends CommonIntroController {
 
     super.onInit();
 
-    seasonIndex = pgcItem.seasons?.indexWhere((e) => e.seasonId == seasonId) ?? 0;
+    seasonIndex =
+        pgcItem.seasons?.indexWhere((e) => e.seasonId == seasonId) ?? 0;
     _updateEpisodeIndex(cid.value);
 
     _onGetPgcInfo();
@@ -298,9 +299,7 @@ class PgcIntroController extends CommonIntroController {
         ..makeHeartBeat()
         ..onReset()
         ..epId = epId
-// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-active-season-v1
         ..seasonId = seasonId
-// PILIPLUS_PRIVATE_WATCHROOM_END pgc-active-season-v1
         ..bvid = bvid
         ..aid = aid
         ..cid.value = cid

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:PiliPlus/private/watchroom/model.dart';
-import 'package:PiliPlus/private/watchroom/session.dart';
-import 'package:PiliPlus/private/watchroom/wire.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/session.dart';
+import 'package:PiliPlus/features/watchroom/wire.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const hostInvite =

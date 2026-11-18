@@ -1,8 +1,8 @@
 import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
-import 'package:PiliPlus/private/watchroom/model.dart';
-import 'package:PiliPlus/private/watchroom/session.dart';
-import 'package:PiliPlus/private/watchroom/panel.dart';
-import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+import 'package:PiliPlus/features/watchroom/model.dart';
+import 'package:PiliPlus/features/watchroom/session.dart';
+import 'package:PiliPlus/features/watchroom/panel.dart';
+import 'package:PiliPlus/features/watchroom/piliplus_adapter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';

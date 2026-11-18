@@ -1,0 +1,12 @@
+{
+  "product": "PiliPlus-SPY",
+  "upstreamCommit": "217fb54f51f6764176319bbdedab2a7522d75401",
+  "version": "2.2.1",
+  "revision": 1,
+  "displayVersion": "2.2.1-SPY.1",
+  "tag": "spy-v2.2.1.1",
+  "androidVersionCode": 565501,
+  "iosBuildNumber": "5655.1",
+  "applicationId": "com.ngbyspy.piliplus.spy",
+  "windowsExecutable": "piliplus_spy.exe"
+}

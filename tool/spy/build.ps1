@@ -61,7 +61,7 @@ try {
             Invoke-SpyNative $sdk.executable (@('build','windows') + $common + @('--build-number',"$($context.release.revision)")) $context.source
             $bundle = Join-Path $context.source 'build/windows/x64/runner/Release'
             if (-not (Test-Path -LiteralPath (Join-Path $bundle $context.release.windowsExecutable))) { throw 'Windows executable is missing' }
-            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$($context.release.displayVersion)-windows-x64.zip"
+            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$($context.release.displayVersion)-windows-x64-portable.zip"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }
             Compress-Archive -Path (Join-Path $bundle '*') -DestinationPath $artifact
         }

@@ -26,6 +26,8 @@ Use commits, tags and source archives for old versions, not new dated project si
 
 ## Release evidence
 
+Publish the user's requested editions on `https://github.com/ngbyspy/PiliPlus/releases` with version tags and platform assets. The local Releases directory is staging and recovery storage. Include Windows portable ZIP, signed Android APK, and self-signable IPA when ready. Ready assets may be published first; append the remaining platform to the same release. Avoid indefinite cloud polling when the user chooses to report the CI outcome themselves.
+
 Pin Flutter and the upstream baseline, preserve verified platform patch chains, lock dependencies, run appropriate analysis/tests and build actual artifacts. CI success does not replace native acceptance.
 
 The original official-watchroom core has user acceptance on Android, Windows and iPad. Report changed package identities and behavior accurately. Linux and network-disconnection recovery remain deferred. iPad IPA signing is done by the user after GitHub macOS no-codesign builds.

@@ -35,7 +35,7 @@ Prepare Windows ZIP, signed Android APK and a self-signable iPad/iPhone device I
 
 Run focused formatting, analysis and tests, inspect actual artifacts, and record the source commit, upstream baseline, toolchain, checks, platform patch hashes and artifact SHA256 values. Separate build success from native acceptance. Live network-disconnection recovery tests remain deferred unless requested.
 
-Store deliverables under `PiliPlusAbout/Releases/` with an identifiable version and report. Preserve the previous accepted packages and a recoverable signing-key backup. A feature edit alone does not authorize publishing; reuse authorization given for the active release/upload task instead of asking repeatedly.
+The user's distribution entry point is the fork's GitHub Releases page, with a version tag and downloadable platform assets. Windows must include a clearly named portable ZIP (the upstream convention: unzip and run, with all DLL/data files). Use `PiliPlusAbout/Releases/` as local staging/archive, not as the sole delivery mechanism. Publish validated ready platforms when a release is requested and add a later IPA to the same version. Keep checksums and per-platform source provenance. Preserve preceding accepted packages and the signing-key backup. A feature edit alone does not authorize publishing; reuse the active release authorization without asking repeatedly.
 
 ## Reorganization and retirement
 

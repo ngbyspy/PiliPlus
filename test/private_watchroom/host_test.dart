@@ -1,0 +1,513 @@
+import 'dart:async';
+
+import 'package:PiliPlus/private/watchroom/model.dart';
+import 'package:PiliPlus/private/watchroom/session.dart';
+import 'package:PiliPlus/private/watchroom/wire.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+const hostInvite =
+    'https://m.bilibili.com/bangumi/theatre/invite?roomid=12345&invitemid=7&seasonid=90&epid=91&token=host-grant';
+
+class HostTransport implements RoomTransport {
+  final calls = <({String path, Map<String, dynamic> parameters})>[];
+  Future<Map<String, dynamic>> Function(
+    String path,
+    Map<String, dynamic> parameters,
+  )?
+  handler;
+  @override
+  Future<Map<String, dynamic>> call(
+    String path, {
+    bool post = false,
+    Map<String, dynamic> parameters = const {},
+  }) async {
+    calls.add((path: path, parameters: Map.of(parameters)));
+    if (handler != null) return handler!(path, parameters);
+    return response(path);
+  }
+
+  Map<String, dynamic> response(String path) {
+    if (path.endsWith('/create')) {
+      return {'room_id': 12345, 'share_url': hostInvite};
+    }
+    if (path.endsWith('/join') || path.endsWith('/info')) {
+      return {
+        'room_id': 12345,
+        'mid': 7,
+        'season_id': 90,
+        'episode_id': 91,
+        'status': {'status': 1, 'progress': 40},
+        'share_url': 'https://www.bilibili.com/watchroom/12345',
+      };
+    }
+    return {};
+  }
+}
+
+RoomSession newSession(HostTransport transport, {int mid = 7}) => RoomSession(
+  transport: transport,
+  mid: mid,
+  buvid: 'host-test-device',
+  realtime: false,
+  now: () => DateTime.utc(2026, 11, 11),
+);
+
+final _activeSessions = <RoomSession>[];
+
+RoomSession trackedSession(HostTransport transport, {int mid = 7}) {
+  final room = newSession(transport, mid: mid);
+  _activeSessions.add(room);
+  return room;
+}
+
+void hostTest(String description, Future<void> Function(WidgetTester) body) {
+  testWidgets(description, (tester) async {
+    try {
+      await body(tester);
+    } finally {
+      for (final room in _activeSessions) {
+        await room.leave();
+      }
+      _activeSessions.clear();
+    }
+  });
+}
+
+class HostPlayer {
+  Duration position = const Duration(seconds: 40);
+  bool playing = true;
+  RoomPlayer bind(RoomSession room, {int episodeId = 91}) => RoomPlayer(
+    identity: 'host',
+    seasonId: 90,
+    episodeId: episodeId,
+    position: () => position,
+    playing: () => playing,
+    play: () async {
+      playing = true;
+      room.observeLocal('play');
+    },
+    pause: () async {
+      playing = false;
+      room.observeLocal('pause');
+    },
+    seek: (value) async {
+      position = value;
+      room.observeLocal('seek');
+    },
+  );
+}
+
+void main() {
+  hostTest('late server pause after a host episode switch is corrected', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    final player = HostPlayer()..position = const Duration(seconds: 2);
+    await room.bindPlayer(player.bind(room, episodeId: 92));
+    room.acceptEvent(
+      RoomProto()
+        ..number(1, 12345)
+        ..message(
+          5,
+          RoomProto()
+            ..number(2, 90)
+            ..number(3, 92)
+            ..number(4, 0)
+            ..number(5, 0),
+        ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(room.room!.playing, isTrue);
+    expect(transport.calls.last.path, endsWith('/modify/progress'));
+    expect(transport.calls.last.parameters['status'], 1);
+    expect(transport.calls.last.parameters['progress'], 2);
+  });
+
+  hostTest('host startup recovers when the native playing event was missed', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    final player = HostPlayer()
+      ..position = Duration.zero
+      ..playing = false;
+    await room.bindPlayer(player.bind(room, episodeId: 92));
+    expect(transport.calls.last.parameters['status'], 0);
+    transport.handler = (path, _) async => path.endsWith('/info')
+        ? {
+            ...transport.response(path),
+            'episode_id': 92,
+            'status': {'status': 0, 'progress': 0},
+          }
+        : transport.response(path);
+    // The engine starts without an observable play callback, as can happen
+    // while the upstream controller is still initializing the new media.
+    player.playing = true;
+    player.position = const Duration(seconds: 1);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(transport.calls.last.parameters['status'], 1);
+    expect(room.room!.playing, isTrue);
+  });
+
+  hostTest('episode startup verifies server state after the progress write', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    final player = HostPlayer()..position = Duration.zero;
+    await room.bindPlayer(player.bind(room, episodeId: 92));
+    // Simulate a successful write followed by the server's delayed season
+    // reset, without any realtime event being delivered to this client.
+    transport.handler = (path, _) async => path.endsWith('/info')
+        ? {
+            ...transport.response(path),
+            'episode_id': 92,
+            'status': {'status': 0, 'progress': 0},
+          }
+        : transport.response(path);
+    player.position = const Duration(seconds: 1);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(
+      transport.calls.where((call) => call.path.endsWith('/info')).length,
+      2,
+    );
+    expect(room.room!.playing, isTrue);
+    expect(transport.calls.last.parameters['status'], 1);
+    expect(transport.calls.last.parameters['progress'], 1);
+  });
+
+  hostTest('host reconciliation stops after publication is disabled', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    final player = HostPlayer()..position = Duration.zero;
+    await room.bindPlayer(player.bind(room, episodeId: 92));
+    await room.setControl(false);
+    final count = transport.calls.length;
+    player.playing = false;
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(transport.calls.length, count);
+  });
+
+  hostTest('a late playing echo cannot override an intentional host pause', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    final player = HostPlayer()..position = const Duration(seconds: 5);
+    await room.bindPlayer(player.bind(room, episodeId: 92));
+    player.playing = false;
+    room.observeLocal('pause');
+    await tester.pump(const Duration(milliseconds: 200));
+    room.acceptEvent(
+      RoomProto()
+        ..number(1, 12345)
+        ..message(
+          5,
+          RoomProto()
+            ..number(2, 90)
+            ..number(3, 92)
+            ..number(4, 1)
+            ..number(5, 5),
+        ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(player.playing, isFalse);
+    expect(room.room!.playing, isFalse);
+    expect(transport.calls.last.parameters['status'], 0);
+    expect(transport.calls.last.parameters['progress'], 5);
+  });
+
+  hostTest(
+    'host episode startup ignores personal history and keeps the room timeline',
+    (tester) async {
+      final room = trackedSession(HostTransport());
+      await room.create(90, 91);
+      expect(room.playbackFor(91)?.position, const Duration(seconds: 40));
+      expect(room.playbackFor(92)?.position, Duration.zero);
+      expect(room.playbackFor(92)?.playing, isTrue);
+      await room.setControl(false);
+      expect(room.playbackFor(92), isNull);
+    },
+  );
+
+  hostTest(
+    'new episode publishes its actual playing state without manual controls',
+    (tester) async {
+      final transport = HostTransport();
+      final room = trackedSession(transport);
+      await room.create(90, 91);
+      final player = HostPlayer()..position = Duration.zero;
+      await room.bindPlayer(player.bind(room, episodeId: 92));
+      final writes = transport.calls
+          .where((call) => call.path.contains('/modify/'))
+          .toList();
+      expect(writes.map((call) => call.path.split('/').last), [
+        'season',
+        'progress',
+      ]);
+      expect(writes.last.parameters['status'], 1);
+      expect(writes.last.parameters['progress'], 0);
+      expect(room.room!.playing, isTrue);
+      expect(room.playbackFor(91)?.position, Duration.zero);
+      await room.bindPlayer(player.bind(room));
+      expect(room.room!.episodeId, 91);
+      expect(transport.calls.last.parameters['status'], 1);
+      expect(transport.calls.last.parameters['progress'], 0);
+    },
+  );
+
+  hostTest(
+    'late native playback start is published after the episode has loaded',
+    (tester) async {
+      final transport = HostTransport();
+      final room = trackedSession(transport);
+      await room.create(90, 91);
+      final player = HostPlayer()
+        ..position = Duration.zero
+        ..playing = false;
+      await room.bindPlayer(player.bind(room, episodeId: 92));
+      expect(transport.calls.last.parameters['status'], 0);
+      player.playing = true;
+      room.observeHostPlaybackState();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(transport.calls.last.parameters['status'], 1);
+      expect(room.room!.playing, isTrue);
+    },
+  );
+
+  hostTest(
+    'native engine events do not change guest follow mode or publish controls',
+    (tester) async {
+      final transport = HostTransport();
+      final guest = trackedSession(transport, mid: 8);
+      await guest.join(const RoomInvite(12345));
+      await guest.bindPlayer(HostPlayer().bind(guest));
+      guest.observeHostPlaybackState();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(guest.followHost, isTrue);
+      expect(guest.playbackFor(92), isNull);
+      expect(
+        transport.calls.where((call) => call.path.contains('/modify/')),
+        isEmpty,
+      );
+    },
+  );
+
+  hostTest('a complete join invitation survives partial room details', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    transport.handler = (path, _) async {
+      if (path.endsWith('/create')) return {'room_id': 12345};
+      if (path.endsWith('/join'))
+        return {...transport.response(path), 'share_url': hostInvite};
+      return transport.response(path);
+    };
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    expect(room.shareInvite.inviter, '7');
+    expect(room.shareInvite.token, 'host-grant');
+  });
+
+  hostTest('overlapping entry requests keep the newest intent', (tester) async {
+    final transport = HostTransport();
+    final room = trackedSession(transport);
+    final creating = room.create(90, 91);
+    final joining = room.join(const RoomInvite(12345));
+    await Future.wait([creating, joining]);
+    expect(
+      transport.calls.where((call) => call.path.endsWith('/create')),
+      isEmpty,
+    );
+    expect(room.active, isTrue);
+    expect(room.canControl, isFalse);
+  });
+
+  hostTest(
+    'creating owns the room and retains its private invitation through join and refresh',
+    (tester) async {
+      final transport = HostTransport();
+      // Use a single recorded transport for create, join, and subsequent refresh.
+      final created = trackedSession(transport);
+      await created.create(90, 91);
+      expect(created.canControl, isTrue);
+      expect(created.shareInvite.token, 'host-grant');
+      final join = transport.calls.singleWhere(
+        (call) => call.path.endsWith('/join'),
+      );
+      expect(join.parameters['token'], 'host-grant');
+      await created.refresh();
+      expect(created.shareInvite.token, 'host-grant');
+      expect(created.shareInvite.inviter, '7');
+    },
+  );
+
+  hostTest(
+    'a cancelled create cannot enable control of a later owner-room join',
+    (tester) async {
+      final transport = HostTransport(),
+          pending = Completer<Map<String, dynamic>>();
+      var joins = 0;
+      transport.handler = (path, _) async {
+        if (path.endsWith('/join') && ++joins == 1) return pending.future;
+        return transport.response(path);
+      };
+      final room = trackedSession(transport);
+      final creating = room.create(90, 91);
+      await tester.pump();
+      expect(joins, 1);
+      await room.leave();
+      await room.join(const RoomInvite(12345));
+      expect(room.canControl, isFalse);
+      pending.complete(transport.response('join'));
+      await creating;
+      expect(room.canControl, isFalse);
+      expect(room.active, isTrue);
+    },
+  );
+
+  hostTest('host pause, seek, and play publish the final native state', (
+    tester,
+  ) async {
+    final transport = HostTransport();
+    final controlled = trackedSession(transport), player = HostPlayer();
+    await controlled.create(90, 91);
+    await controlled.bindPlayer(player.bind(controlled));
+    player.playing = false;
+    player.position = const Duration(seconds: 88);
+    controlled.observeLocal('pause');
+    controlled.observeLocal('seek');
+    await tester.pump(const Duration(milliseconds: 200));
+    final paused = transport.calls
+        .where((call) => call.path.endsWith('/modify/progress'))
+        .single;
+    expect(paused.parameters['status'], 0);
+    expect(paused.parameters['progress'], 88);
+    player.playing = true;
+    controlled.observeLocal('play');
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(transport.calls.last.parameters['status'], 1);
+  });
+
+  hostTest('episode changes wait for an earlier progress write', (
+    tester,
+  ) async {
+    final transport = HostTransport(),
+        pending = Completer<Map<String, dynamic>>();
+    final room = trackedSession(transport), player = HostPlayer();
+    await room.create(90, 91);
+    await room.bindPlayer(player.bind(room));
+    transport.handler = (path, _) async => path.endsWith('/modify/progress')
+        ? pending.future
+        : transport.response(path);
+    room.observeLocal('seek');
+    await tester.pump(const Duration(milliseconds: 200));
+    final change = room.changeEpisode(90, 92);
+    await tester.pump();
+    expect(
+      transport.calls.where((call) => call.path.endsWith('/modify/season')),
+      isEmpty,
+    );
+    pending.complete({});
+    await change;
+    final writes = transport.calls
+        .where((call) => call.path.contains('/modify/'))
+        .toList();
+    expect(writes.map((call) => call.path.split('/').last), [
+      'progress',
+      'season',
+    ]);
+    expect(room.shareInvite.episodeId, 92);
+    expect(room.shareInvite.token, 'host-grant');
+  });
+
+  hostTest(
+    'rapid host episode changes keep only the newest queued request',
+    (tester) async {
+      final transport = HostTransport(),
+          pending = Completer<Map<String, dynamic>>();
+      final room = trackedSession(transport);
+      await room.create(90, 91);
+      transport.handler = (path, parameters) async =>
+          parameters['episode_id'] == 92
+          ? pending.future
+          : transport.response(path);
+      final first = room.changeEpisode(90, 92);
+      await tester.pump();
+      final second = room.changeEpisode(90, 93),
+          third = room.changeEpisode(90, 94);
+      await tester.pump();
+      pending.complete({});
+      await Future.wait([first, second, third]);
+      final episodes = transport.calls
+          .where((call) => call.path.endsWith('/modify/season'))
+          .map((call) => call.parameters['episode_id']);
+      expect(episodes, [92, 94]);
+      expect(room.room!.episodeId, 94);
+    },
+  );
+
+  hostTest('stopping host control invalidates an in-flight episode result', (
+    tester,
+  ) async {
+    final transport = HostTransport(),
+        pending = Completer<Map<String, dynamic>>();
+    final room = trackedSession(transport);
+    await room.create(90, 91);
+    transport.handler = (path, _) async => path.endsWith('/modify/season')
+        ? pending.future
+        : transport.response(path);
+    final change = room.changeEpisode(90, 92);
+    await tester.pump();
+    await room.setControl(false);
+    pending.complete({});
+    await change;
+    expect(room.room!.episodeId, 91);
+    expect(room.canControl, isFalse);
+  });
+
+  hostTest(
+    'failed episode changes remain visible and do not block later commands',
+    (tester) async {
+      final transport = HostTransport();
+      final controlled = trackedSession(transport);
+      await controlled.create(90, 91);
+      transport.handler = (path, parameters) async {
+        if (parameters['episode_id'] == 92)
+          throw const RoomApiException(-500, 'test rejected');
+        return transport.response(path);
+      };
+      await expectLater(
+        controlled.changeEpisode(90, 92),
+        throwsA(isA<RoomApiException>()),
+      );
+      expect(controlled.error, contains('test rejected'));
+      await controlled.changeEpisode(90, 93);
+      expect(controlled.room!.episodeId, 93);
+      expect(controlled.error, isEmpty);
+    },
+  );
+
+  hostTest('guest cannot publish host commands', (tester) async {
+    final transport = HostTransport();
+    final guest = trackedSession(transport, mid: 8);
+    await guest.join(const RoomInvite(12345));
+    await expectLater(guest.setControl(true), throwsStateError);
+    await guest.changeEpisode(90, 92);
+    expect(
+      transport.calls.where((call) => call.path.contains('/modify/')),
+      isEmpty,
+    );
+  });
+}

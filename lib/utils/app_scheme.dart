@@ -33,6 +33,9 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-utils-app_scheme-dart-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-utils-app_scheme-dart-v1
 import 'package:material_ui/material_ui.dart';
 
 abstract final class PiliScheme {
@@ -126,6 +129,12 @@ abstract final class PiliScheme {
             );
             return true;
           case 'pgc':
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN app-room-link-v1
+            if (path == '/room') {
+              WatchroomAdapter.open(link: uri.toString());
+              return true;
+            }
+// PILIPLUS_PRIVATE_WATCHROOM_END app-room-link-v1
             // bilibili://pgc/season/ep/123456?h5_awaken_params=random
             String? id = uriDigitRegExp.firstMatch(path)?.group(1);
             if (id != null) {
@@ -618,7 +627,25 @@ abstract final class PiliScheme {
         ? pathSegments.elementAtOrNull(1)
         : first;
     // if (kDebugMode) debugPrint('area: $area');
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-invite-link-v1
+    if (const {'www.bilibili.com', 'm.bilibili.com', 'bilibili.com'}
+            .contains(uri.host) &&
+        uri.path == '/bangumi/theatre/invite') {
+      WatchroomAdapter.open(link: uri.toString());
+      return true;
+    }
+// PILIPLUS_PRIVATE_WATCHROOM_END room-invite-link-v1
     switch (area) {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-link-v1
+      case 'watchroom':
+        if (const {'www.bilibili.com', 'm.bilibili.com', 'bilibili.com'}
+            .contains(uri.host)) {
+          WatchroomAdapter.open(link: uri.toString());
+          return true;
+        }
+        launchURL();
+        return false;
+// PILIPLUS_PRIVATE_WATCHROOM_END room-link-v1
       case 'note' || 'note-app':
         String? id = uri.queryParameters['cvid'];
         if (id != null) {

@@ -55,6 +55,9 @@ android {
     }
 
     buildFeatures {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN debug-resource-feature-v1
+        resValues = true
+// PILIPLUS_PRIVATE_WATCHROOM_END debug-resource-feature-v1
         if (project.hasProperty("dev")) {
             resValues = true
         }
@@ -80,6 +83,9 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN debug-app-name-v1
+            resValue("string", "app_name", "PiliPlus 放映室测试")
+// PILIPLUS_PRIVATE_WATCHROOM_END debug-app-name-v1
         }
     }
 

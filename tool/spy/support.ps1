@@ -240,9 +240,15 @@ function Prepare-SpyAndroidNativeLibraries($Context) {
     $reports
 }
 
-function Prepare-SpyIosSource($Context) {
+function Prepare-SpyIosSource($Context, [switch]$CheckOnly) {
     $config = Get-Content -LiteralPath (Join-Path $Context.source 'tool/spy/config/flutter-ios.json') -Raw | ConvertFrom-Json
     $fixture = Join-Path $Context.cache 'spy/ios-source-reference'
+    if (Test-Path -LiteralPath $fixture) {
+        $cachePath = [IO.Path]::GetFullPath($Context.cache).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        $fixturePath = (Resolve-Path -LiteralPath $fixture).Path
+        if (-not $fixturePath.StartsWith($cachePath,[StringComparison]::OrdinalIgnoreCase) -or (Get-Item -LiteralPath $fixture -Force).LinkType) { throw 'Unsafe native source reference directory' }
+        Remove-Item -LiteralPath $fixturePath -Recurse -Force
+    }
     New-Item -ItemType Directory -Path $fixture -Force | Out-Null
     $archive = Join-Path $fixture 'source.tar'
     Invoke-SpyNative git @('-C',$Context.source,'archive','--format=tar',"--output=$archive",$Context.commit)
@@ -254,8 +260,9 @@ function Prepare-SpyIosSource($Context) {
         if ((Get-SpyHash $file) -cne $patch.sha256) { throw 'Native iOS source patch changed' }
         foreach ($line in Get-Content -LiteralPath $file) {
             if ($line -match '^\+\+\+ b/(.+)$') {
-                if ($Matches[1].Contains('..') -or $Matches[1] -notmatch '^(lib/|pubspec\.yaml$)') { throw 'Unexpected native iOS patch target' }
-                [void]$targets.Add($Matches[1])
+                $targetPath = $Matches[1]
+                if ($targetPath.Contains('..') -or $targetPath -notmatch '^(lib/.+|pubspec\.yaml)$') { throw 'Unexpected native iOS patch target' }
+                [void]$targets.Add($targetPath)
             }
         }
         Invoke-SpyNative git @('-C',$fixture,'apply','--check','--whitespace=nowarn',$file)
@@ -274,6 +281,8 @@ function Prepare-SpyIosSource($Context) {
         }
         $files += @{path=$target;sha256=(Get-SpyHash $expected)}
     }
-    foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $fixture $file.path) -Destination (Join-Path $Context.source $file.path) -Force }
+    if (-not $CheckOnly) {
+        foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $fixture $file.path) -Destination (Join-Path $Context.source $file.path) -Force }
+    }
     @{patches=$config.sourcePatches;files=$files}
 }

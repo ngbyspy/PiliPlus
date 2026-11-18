@@ -159,3 +159,4 @@ pubspec_overrides.yaml
 .secrets/
 !/tool/spy/tests/
 !/tool/spy/tests/*.py
+!/tool/spy/tests/*.ps1

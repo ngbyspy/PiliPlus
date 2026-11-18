@@ -39,6 +39,9 @@ jobs:
           cache: false
       - name: Check packaging verifier
         run: python3 -m unittest discover -s tool/spy/tests -p test_ios_package.py
+      - name: Check native source preparation
+        shell: pwsh
+        run: ./tool/spy/tests/test_ios_source.ps1
       - name: Validate and build device IPA
         shell: pwsh
         run: |

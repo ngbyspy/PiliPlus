@@ -23,10 +23,10 @@ def verify_ipa(ipa: Path) -> dict:
         if apps != ['Payload/Runner.app/Info.plist']:
             raise ValueError('IPA must contain one Payload/Runner.app')
         info = plistlib.loads(archive.read(apps[0]))
-        if info['CFBundleIdentifier'] != 'com.ngbyspy.piliplus.spy':
-            raise ValueError('Unexpected test bundle identifier')
-        if info['CFBundleDisplayName'] != 'PiliPlus SPY':
-            raise ValueError('Unexpected test application name')
+        if info['CFBundleIdentifier'] != 'com.example.piliplus':
+            raise ValueError('Bundle identifier would not inherit upstream data')
+        if info['CFBundleDisplayName'] != 'PiliPlus':
+            raise ValueError('Unexpected release application name')
         if 2 not in info.get('UIDeviceFamily', []):
             raise ValueError('Build does not support iPad')
         orientations = info.get('UISupportedInterfaceOrientations~ipad', [])

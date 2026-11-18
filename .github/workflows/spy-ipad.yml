@@ -48,6 +48,9 @@ jobs:
       - name: Check native source preparation
         shell: pwsh
         run: ./tool/spy/tests/test_ios_source.ps1
+      - name: Check compatible release version policy
+        shell: pwsh
+        run: ./tool/spy/tests/test_release_policy.ps1
       - name: Validate and build device IPA
         shell: pwsh
         run: |

@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 if ($report.PSObject.Properties['failure']) { throw 'Cannot register a failed build' }
 if (-not $report.validation.analysis -or -not $report.validation.tests) { throw 'Build validation is incomplete' }
+if ($report.release.applicationId -cne 'com.example.piliplus') { throw 'Isolated test identity cannot be registered as an upstream-compatible formal release' }
 if (-not $ArtifactPath) { $ArtifactPath = $report.artifact.path }
 if ((Get-FileHash -LiteralPath $ArtifactPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $report.artifact.sha256) { throw 'Release package checksum mismatch' }
 $platform = switch ($report.platform) { 'Windows' {'Windows'} 'Android' {'Android'} 'iOS' {'iPad'} default {throw 'Unsupported platform'} }
@@ -24,7 +25,11 @@ if (Test-Path -LiteralPath $destination) {
 $manifestPath = Join-Path $metadata 'release-manifest.json'
 if (Test-Path -LiteralPath $manifestPath) { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
 else {
-    $manifest = [pscustomobject]@{product='PiliPlus-SPY';version=$report.release.displayVersion;title=$report.release.displayVersion;date=[DateTime]::Now.ToString('yyyy-MM-dd');historical=$false;highlights=@('与 B 站官方网页、客户端互通的放映厅。','首次安装 SPY 需登录；IPA 由用户自行签名。');pendingPlatforms=@();artifacts=@()}
+    $manifest = [pscustomobject]@{product='PiliPlus-SPY';version=$report.release.displayVersion;title=$report.release.displayVersion;date=[DateTime]::Now.ToString('yyyy-MM-dd');historical=$false;highlights=@('与 B 站官方网页、客户端互通的放映厅；修复历史记录布局溢出。','正式版恢复原版应用身份与数据位置，测试版保持独立。','iPad 自签时保持原有 Bundle ID 和签名配置，以覆盖更新。');pendingPlatforms=@();artifacts=@()}
+}
+$manifest | Add-Member -NotePropertyMembers @{upstreamVersion=$report.release.version;relationship=$report.release.relationship;platformStatus=@{}} -Force
+if (-not $report.release.androidReleaseEnabled) {
+    $manifest.platformStatus['Android'] = @{label='暂缓发行';detail='需要官方签名才能覆盖原版，现阶段保留官方安装。'}
 }
 $entry = [pscustomobject]@{platform=$platform;file="$platform/$name";sha256=$report.artifact.sha256;bytes=(Get-Item -LiteralPath $destination).Length;sourceCommit=$report.sourceCommit}
 $manifest.artifacts = @($manifest.artifacts | Where-Object platform -ne $platform) + @($entry)

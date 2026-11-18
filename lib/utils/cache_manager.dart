@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/runtime_identity.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:path/path.dart' as path;
@@ -22,7 +23,7 @@ Future<Directory> _cacheDirectoryProvider() async {
       return Directory(
         path.join(
           tmpDirPath,
-          kReleaseMode ? 'PiliPlus-SPY' : 'PiliPlus-SPY-dev',
+          desktopImageCacheName(development: !kReleaseMode),
         ),
       );
     }

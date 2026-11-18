@@ -1,4 +1,7 @@
-param([string]$WorkspaceRoot = (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))))
+param(
+    [string]$WorkspaceRoot = (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))),
+    [switch]$DevelopmentOnly
+)
 . (Join-Path $PSScriptRoot 'support.ps1')
 $workspace = (Resolve-Path -LiteralPath $WorkspaceRoot).Path
 $directory = Join-Path $workspace '.secrets'
@@ -11,6 +14,7 @@ if ((Test-Path -LiteralPath $key) -or (Test-Path -LiteralPath $credentials)) {
     Write-Output 'The preserved Android signing identity is intact.'
     return
 }
+if (-not $DevelopmentOnly) { throw 'A generated key cannot cover official PiliPlus. Key generation is permitted only for explicitly requested isolated testing.' }
 New-Item -ItemType Directory -Path $directory -Force | Out-Null
 $password = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $previous = $env:PILIPLUS_SPY_KEY_PASSWORD

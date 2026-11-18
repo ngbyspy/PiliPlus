@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ngbyspy.piliplus.spy"
+        applicationId = "com.example.piliplus"
         minSdk = flutter.minSdkVersion
         targetSdk = 37
         versionCode = flutter.versionCode

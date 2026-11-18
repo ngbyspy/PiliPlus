@@ -2,11 +2,16 @@
   "product": "PiliPlus-SPY",
   "upstreamCommit": "217fb54f51f6764176319bbdedab2a7522d75401",
   "version": "2.2.1",
-  "revision": 1,
-  "displayVersion": "2.2.1-SPY.1",
-  "tag": "spy-v2.2.1.1",
-  "androidVersionCode": 565501,
-  "iosBuildNumber": "5655.1",
-  "applicationId": "com.ngbyspy.piliplus.spy",
-  "windowsExecutable": "piliplus_spy.exe"
+  "relationship": "vertical",
+  "upstreamFixes": ["history-row-overflow"],
+  "improvementRevision": 1,
+  "revision": 2,
+  "displayVersion": "2.2.1.1",
+  "tag": "spy-v2.2.1.1-r2",
+  "androidVersionCode": 5655,
+  "androidReleaseEnabled": false,
+  "androidCertificateSha256": "38a7f1047f60e49d651f4d4dcc9a52a6c8bcd221a218ea1ff6d6a42c27f1c2d9",
+  "iosBuildNumber": "5655",
+  "applicationId": "com.example.piliplus",
+  "windowsExecutable": "piliplus.exe"
 }

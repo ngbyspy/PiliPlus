@@ -32,7 +32,7 @@ Pin Flutter and the upstream baseline, preserve verified platform patch chains, 
 
 The original official-watchroom core has user acceptance on Android, Windows and iPad. Report changed package identities and behavior accurately. Linux and network-disconnection recovery remain deferred. iPad IPA signing is done by the user after GitHub macOS no-codesign builds.
 
-Record exact SPY/upstream commits, dependencies/toolchain, checks and artifact hashes. Preserve previous accepted packages and the signing identity.
+Record exact SPY/upstream commits, dependencies/toolchain, checks and artifact hashes. Preserve previous packages and signing backups. The formal edition retains upstream identity/data; separate only testing builds. Windows resource metadata and the support path must match the original exactly. Mobile release ID is com.example.piliplus. Android mutual updates require the official certificate; the available key differs, so formal Android packaging is deferred. Parallel display versions stay identical to upstream; vertical bug-fix revisions append a small fourth component. Native build numbers remain the upstream baseline to permit later official updates.
 
 ## Current authorization
 

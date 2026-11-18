@@ -18,7 +18,10 @@ foreach ($directory in Get-ChildItem -LiteralPath $ReleaseRoot -Directory) {
         $href = (($directory.Name + '/' + $relative) -split '/' | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
         $assets += @{platform=$artifact.platform;name=(Split-Path -Leaf $file);href=$href;bytes=(Get-Item -LiteralPath $file).Length;sha256=$artifact.sha256;sourceCommit=$artifact.sourceCommit}
     }
-    $releases += @{version=$manifest.version;title=$manifest.title;date=$manifest.date;historical=[bool]$manifest.historical;highlights=@($manifest.highlights);pendingPlatforms=@($manifest.pendingPlatforms);assets=$assets}
+    $platformStatus = if ($manifest.PSObject.Properties['platformStatus']) { $manifest.platformStatus } else { @{} }
+    $relationship = if ($manifest.PSObject.Properties['relationship']) { $manifest.relationship } else { '' }
+    $upstreamVersion = if ($manifest.PSObject.Properties['upstreamVersion']) { $manifest.upstreamVersion } else { '' }
+    $releases += @{version=$manifest.version;title=$manifest.title;date=$manifest.date;historical=[bool]$manifest.historical;highlights=@($manifest.highlights);pendingPlatforms=@($manifest.pendingPlatforms);platformStatus=$platformStatus;relationship=$relationship;upstreamVersion=$upstreamVersion;assets=$assets}
 }
 $releases = @($releases | Sort-Object @{Expression={ $_.historical };Ascending=$true},@{Expression={ $_.date };Descending=$true})
 $data = ConvertTo-Json -InputObject $releases -Depth 20 -Compress

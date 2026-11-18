@@ -14,11 +14,11 @@ spec.loader.exec_module(ipa_package)
 
 
 class IpaValidationTest(unittest.TestCase):
-    def make_ipa(self, directory, *, full_screen=False, missing_executable=False, ipad=True):
+    def make_ipa(self, directory, *, full_screen=False, missing_executable=False, ipad=True, bundle='com.example.piliplus'):
         ipa = Path(directory) / 'fixture.ipa'
         info = {
-            'CFBundleIdentifier': 'com.ngbyspy.piliplus.spy',
-            'CFBundleDisplayName': 'PiliPlus SPY',
+            'CFBundleIdentifier': bundle,
+            'CFBundleDisplayName': 'PiliPlus',
             'CFBundleExecutable': 'Runner', 'CFBundleShortVersionString': '2.2.1',
             'CFBundleVersion': '1', 'UIDeviceFamily': [1, 2] if ipad else [1],
             'UIRequiresFullScreen': full_screen,
@@ -45,6 +45,11 @@ class IpaValidationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, 'does not support iPad'):
                 ipa_package.verify_ipa(self.make_ipa(directory, ipad=False))
+
+    def test_separate_release_identity_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, 'inherit upstream data'):
+                ipa_package.verify_ipa(self.make_ipa(directory, bundle='com.ngbyspy.piliplus.spy'))
 
     def test_forced_full_screen_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

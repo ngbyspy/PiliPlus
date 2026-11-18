@@ -23,6 +23,22 @@ function Write-SpyJson($Value, [string]$Path) {
     [IO.File]::WriteAllText($Path,($Value | ConvertTo-Json -Depth 30) + "`n",[Text.UTF8Encoding]::new($false))
 }
 
+function Get-SpyDisplayVersion([string]$UpstreamVersion, [string]$Relationship, [int]$ImprovementRevision, [string[]]$UpstreamFixes) {
+    if ($Relationship -eq 'parallel' -and $ImprovementRevision -eq 0 -and $UpstreamFixes.Count -eq 0) { return $UpstreamVersion }
+    if ($Relationship -eq 'vertical' -and $ImprovementRevision -gt 0 -and $UpstreamFixes.Count -gt 0) { return "$UpstreamVersion.$ImprovementRevision" }
+    throw 'Parallel versions keep the upstream number; vertical revisions require an upstream bug fix and positive suffix.'
+}
+
+function Assert-SpyReleasePolicy([string]$Source, $Release) {
+    $pubspec = Get-SpyGit $Source @('show',"$($Release.upstreamCommit):pubspec.yaml")
+    $version = [regex]::Match($pubspec,'(?m)^version:\s*([^+\s]+)').Groups[1].Value
+    $code = [int](Get-SpyGit $Source @('rev-list','--count',$Release.upstreamCommit))
+    $display = Get-SpyDisplayVersion $version $Release.relationship $Release.improvementRevision @($Release.upstreamFixes)
+    if ($Release.version -cne $version -or $Release.displayVersion -cne $display) { throw 'Release version does not follow the upstream/parallel/vertical policy' }
+    if ($Release.androidVersionCode -ne $code -or $Release.iosBuildNumber -cne "$code") { throw 'Native build numbers must retain the upstream baseline; do not multiply or count downstream commits' }
+    if ($Release.applicationId -cne 'com.example.piliplus' -or $Release.windowsExecutable -cne 'piliplus.exe') { throw 'Formal releases must retain upstream application identity' }
+}
+
 function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {
     $source = (Resolve-Path -LiteralPath $SourceRoot).Path
     if ((Get-SpyGit $source @('rev-parse','--show-toplevel')).Replace('/','\') -ine $source.Replace('/','\')) { throw 'SourceRoot must be the repository root' }
@@ -33,7 +49,9 @@ function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {
         $CacheRoot = Join-Path $parent '.cache'
     }
     New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
-    @{source=$source;branch=$branch;commit=(Get-SpyGit $source @('rev-parse','HEAD'));cache=(Resolve-Path -LiteralPath $CacheRoot).Path;release=(Get-Content -LiteralPath (Join-Path $source 'tool/spy/release.json') -Raw | ConvertFrom-Json)}
+    $release = Get-Content -LiteralPath (Join-Path $source 'tool/spy/release.json') -Raw | ConvertFrom-Json
+    Assert-SpyReleasePolicy $source $release
+    @{source=$source;branch=$branch;commit=(Get-SpyGit $source @('rev-parse','HEAD'));cache=(Resolve-Path -LiteralPath $CacheRoot).Path;release=$release}
 }
 
 function Prepare-SpySdk($Context, [string]$Platform, [string]$SdkRoot) {

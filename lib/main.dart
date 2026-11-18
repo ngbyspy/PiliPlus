@@ -28,6 +28,7 @@ import 'package:PiliPlus/utils/max_screen_size.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
+import 'package:PiliPlus/utils/runtime_identity.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -89,9 +90,9 @@ Future<void> _initTmpPath() async {
 
 Future<void> _initAppPath() async {
   if (Platform.isWindows) {
-    appSupportDirPath = path.join(
+    appSupportDirPath = desktopSupportPath(
       (await getApplicationSupportDirectory()).path,
-      kReleaseMode ? 'spy' : 'spy-dev',
+      development: !kReleaseMode,
     );
     return;
   }
@@ -219,7 +220,7 @@ void main() async {
         ..isVisibleInTaskbar = true
         ..title = Constants.appName;
       if (Platform.isWindows)
-        window.title = kReleaseMode ? 'PiliPlus SPY' : 'PiliPlus SPY dev';
+        window.title = kReleaseMode ? 'PiliPlus' : 'PiliPlus 放映厅测试';
       if (useContentUnderTitleBar) window.setContentUnderTitleBar(true);
       if (Pref.isWindowMaximized) window.maximize();
       void show([_]) => window

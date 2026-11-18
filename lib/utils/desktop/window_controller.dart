@@ -9,6 +9,9 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:nativeapi/nativeapi.dart' as nativeapi;
 import 'package:window_manager/window_manager.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-exit-import-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END windows-exit-import-v1
 
 class WindowController {
   WindowController._();
@@ -140,6 +143,9 @@ class WindowController {
   }
 
   Future<void> onClose() async {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-room-exit-v1
+    if (!await WatchroomAdapter.instance.prepareDesktopExit()) return;
+// PILIPLUS_PRIVATE_WATCHROOM_END windows-room-exit-v1
     await GStorage.compact();
     await GStorage.close();
     TrayController.instance.dispose();

@@ -13,6 +13,9 @@ import 'package:flutter/services.dart'
     show KeyDownEvent, KeyUpEvent, LogicalKeyboardKey, HardwareKeyboard;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:material_ui/material_ui.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-input-import-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END room-input-import-v1
 
 class PlayerFocus extends StatelessWidget {
   const PlayerFocus({
@@ -47,6 +50,9 @@ class PlayerFocus extends StatelessWidget {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-input-shortcuts-v1
+        if (WatchroomAdapter.textInputHasFocus()) return KeyEventResult.ignored;
+// PILIPLUS_PRIVATE_WATCHROOM_END room-input-shortcuts-v1
         final handled = _handleKey(context, event);
         if (handled || _shouldHandle(event.logicalKey)) {
           return KeyEventResult.handled;

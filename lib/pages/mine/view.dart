@@ -26,6 +26,9 @@ import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-pages-mine-view-dart-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-pages-mine-view-dart-v1
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:material_ui/material_ui.dart' hide ListTile;
 
@@ -222,6 +225,9 @@ class _MediaPageState extends CommonPageState<MinePage>
             onPressed: () => Get.toNamed('/setting', preventDuplicates: false),
             icon: const Icon(Icons.settings_outlined),
           ),
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN mine-entry-v1
+          WatchroomAdapter.instance.entryButton(),
+// PILIPLUS_PRIVATE_WATCHROOM_END mine-entry-v1
           const SizedBox(width: 16),
         ],
       ),

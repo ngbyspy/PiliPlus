@@ -74,6 +74,9 @@ import 'package:flutter/foundation.dart' show kDebugMode, compute;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN import-lib-pages-video-controller-dart-v1
+import 'package:PiliPlus/private/watchroom/piliplus_adapter.dart';
+// PILIPLUS_PRIVATE_WATCHROOM_END import-lib-pages-video-controller-dart-v1
 import 'package:hive_ce/hive.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:media_kit/media_kit.dart' hide Subtitle;
@@ -412,6 +415,11 @@ class VideoDetailController extends GetxController
     aid = args['aid'];
     cid = RxInt(args['cid']);
     epId = args['epId'];
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-player-visible-v1
+    if (WatchroomAdapter.instance.shouldInitialize(epId)) {
+      _autoPlay.value = true;
+    }
+// PILIPLUS_PRIVATE_WATCHROOM_END room-player-visible-v1
     seasonId = args['seasonId'];
     pgcType = args['pgcType'];
     heroTag = args['heroTag'];
@@ -743,6 +751,9 @@ class VideoDetailController extends GetxController
 
   Future<void>? initPlayerIfNeeded(bool autoFullScreenFlag) {
     if (_autoPlay.value ||
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN force-player-init-v1
+        WatchroomAdapter.instance.shouldInitialize(epId) ||
+// PILIPLUS_PRIVATE_WATCHROOM_END force-player-init-v1
         (plPlayerController.preInitPlayer && !plPlayerController.processing) &&
             (isFileSource
                 ? true
@@ -759,8 +770,16 @@ class VideoDetailController extends GetxController
     bool autoFullScreenFlag = false,
   }) async {
     Duration? seek = defaultST ?? playedTime;
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN player-initial-state-v1
+    WatchroomAdapter.instance.suspend(heroTag);
+    autoplay ??= WatchroomAdapter.instance.initialPlaying(epId);
+    seek = WatchroomAdapter.instance.startPosition(epId) ?? seek;
+// PILIPLUS_PRIVATE_WATCHROOM_END player-initial-state-v1
     if (seek == .zero) seek = null;
     seek ??= getFirstSegment();
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN room-seek-priority-v1
+    seek = WatchroomAdapter.instance.startPosition(epId) ?? seek;
+// PILIPLUS_PRIVATE_WATCHROOM_END room-seek-priority-v1
     await plPlayerController.setDataSource(
       isFileSource
           ? FileSource(
@@ -789,6 +808,14 @@ class VideoDetailController extends GetxController
       onInit: () {
         videoState.value = true;
         setSubtitle(vttSubtitlesIndex.value);
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN bind-player-v1
+        WatchroomAdapter.instance.bind(
+          identity: heroTag,
+          episodeId: epId,
+          seasonId: seasonId,
+          player: plPlayerController,
+        );
+// PILIPLUS_PRIVATE_WATCHROOM_END bind-player-v1
       },
       width: firstVideo.width,
       height: firstVideo.height,
@@ -796,6 +823,9 @@ class VideoDetailController extends GetxController
       autoFullScreenFlag: autoFullScreenFlag,
       rotate: _rotate,
     );
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN player-ready-state-v1
+    WatchroomAdapter.instance.observeNativeState(plPlayerController);
+// PILIPLUS_PRIVATE_WATCHROOM_END player-ready-state-v1
 
     if (isClosed) return;
 
@@ -1292,6 +1322,9 @@ class VideoDetailController extends GetxController
   @override
   void onClose() {
     cid.close();
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN unbind-player-v1
+    WatchroomAdapter.instance.suspend(heroTag);
+// PILIPLUS_PRIVATE_WATCHROOM_END unbind-player-v1
     if (isFileSource) {
       cacheLocalProgress();
     }

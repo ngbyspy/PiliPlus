@@ -5,6 +5,9 @@ project(piliplus LANGUAGES CXX)
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "piliplus")
+# PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-binary-name-v1
+set(BINARY_NAME "piliplus_watchroom")
+# PILIPLUS_PRIVATE_WATCHROOM_END windows-binary-name-v1
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

@@ -298,6 +298,9 @@ class PgcIntroController extends CommonIntroController {
         ..makeHeartBeat()
         ..onReset()
         ..epId = epId
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN pgc-active-season-v1
+        ..seasonId = seasonId
+// PILIPLUS_PRIVATE_WATCHROOM_END pgc-active-season-v1
         ..bvid = bvid
         ..aid = aid
         ..cid.value = cid

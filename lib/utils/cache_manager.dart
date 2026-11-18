@@ -1,4 +1,7 @@
 import 'dart:io' show Directory, File;
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-cache-import-v1
+import 'dart:io' as watchroomIo show Platform;
+// PILIPLUS_PRIVATE_WATCHROOM_END windows-cache-import-v1
 
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -16,6 +19,11 @@ Future<Directory> _cacheDirectoryProvider() async {
     );
   }
   if (PlatformUtils.isDesktop) {
+// PILIPLUS_PRIVATE_WATCHROOM_BEGIN windows-test-cache-v1
+    if (watchroomIo.Platform.isWindows) {
+      return Directory(path.join(tmpDirPath, 'PiliPlus-watchroom-windows'));
+    }
+// PILIPLUS_PRIVATE_WATCHROOM_END windows-test-cache-v1
     return Directory(path.join(tmpDirPath, Constants.appName));
   }
   return Directory(tmpDirPath);

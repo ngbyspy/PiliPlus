@@ -14,7 +14,7 @@ spec.loader.exec_module(ipa_package)
 
 
 class IpaValidationTest(unittest.TestCase):
-    def make_ipa(self, directory, *, full_screen=False, missing_executable=False, ipad=True, bundle='com.example.piliplus'):
+    def make_ipa(self, directory, *, full_screen=False, missing_executable=False, ipad=True, bundle='com.spy.piliPlus'):
         ipa = Path(directory) / 'fixture.ipa'
         info = {
             'CFBundleIdentifier': bundle,
@@ -48,8 +48,19 @@ class IpaValidationTest(unittest.TestCase):
 
     def test_separate_release_identity_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, 'inherit upstream data'):
+            with self.assertRaisesRegex(ValueError, 'expected build identity'):
                 ipa_package.verify_ipa(self.make_ipa(directory, bundle='com.ngbyspy.piliplus.spy'))
+
+    def test_development_bundle_rejected_as_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, 'expected build identity'):
+                ipa_package.verify_ipa(self.make_ipa(directory, bundle='com.spy.piliplus.dev'))
+
+    def test_earlier_build_can_be_verified_against_its_recorded_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ipa = self.make_ipa(directory, bundle='com.example.piliplus')
+            result = ipa_package.verify_ipa(ipa, expected_bundle_id='com.example.piliplus')
+            self.assertEqual(result['bundleIdentifier'], 'com.example.piliplus')
 
     def test_forced_full_screen_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -7,7 +7,10 @@ $ErrorActionPreference = 'Stop'
 $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 if ($report.PSObject.Properties['failure']) { throw 'Cannot register a failed build' }
 if (-not $report.validation.analysis -or -not $report.validation.tests) { throw 'Build validation is incomplete' }
-if ($report.release.applicationId -cne 'com.example.piliplus') { throw 'Isolated test identity cannot be registered as an upstream-compatible formal release' }
+if ($report.platform -eq 'iOS') {
+    $expectedBundleId = if ($report.release.PSObject.Properties['iosBundleId']) { $report.release.iosBundleId } else { $report.release.applicationId }
+    if ($report.ipaVerification.bundleIdentifier -cne $expectedBundleId -or $report.ipaVerification.displayName -cne 'PiliPlus') { throw 'IPA does not match its recorded release identity' }
+} elseif ($report.release.applicationId -cne 'com.example.piliplus') { throw 'Isolated test identity cannot be registered as an upstream-compatible formal release' }
 if (-not $ArtifactPath) { $ArtifactPath = $report.artifact.path }
 if ((Get-FileHash -LiteralPath $ArtifactPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $report.artifact.sha256) { throw 'Release package checksum mismatch' }
 $platform = switch ($report.platform) { 'Windows' {'Windows'} 'Android' {'Android'} 'iOS' {'iPad'} default {throw 'Unsupported platform'} }
@@ -25,7 +28,7 @@ if (Test-Path -LiteralPath $destination) {
 $manifestPath = Join-Path $metadata 'release-manifest.json'
 if (Test-Path -LiteralPath $manifestPath) { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
 else {
-    $manifest = [pscustomobject]@{product='PiliPlus-SPY';version=$report.release.displayVersion;title=$report.release.displayVersion;date=[DateTime]::Now.ToString('yyyy-MM-dd');historical=$false;highlights=@('与 B 站官方网页、客户端互通的放映厅；修复历史记录布局溢出。','正式版恢复原版应用身份与数据位置，测试版保持独立。','iPad 自签时保持原有 Bundle ID 和签名配置，以覆盖更新。');pendingPlatforms=@();artifacts=@()}
+    $manifest = [pscustomobject]@{product='PiliPlus-SPY';version=$report.release.displayVersion;title=$report.release.displayVersion;date=[DateTime]::Now.ToString('yyyy-MM-dd');historical=$false;highlights=@('与 B 站官方网页、客户端互通的放映厅；修复历史记录布局溢出。','Windows 正式版沿用原版程序标识与数据位置，测试版保持独立。','iPad 覆盖安装时，自签所用的最终 Bundle ID 和签名配置应与已安装版本一致。');pendingPlatforms=@();artifacts=@()}
 }
 $manifest | Add-Member -NotePropertyMembers @{upstreamVersion=$report.release.version;relationship=$report.release.relationship;platformStatus=@{}} -Force
 if (-not $report.release.androidReleaseEnabled) {

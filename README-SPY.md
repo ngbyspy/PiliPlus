@@ -10,9 +10,12 @@ APK 的正式发行目前暂缓（缺少官方签名）；iPad / iPhone 提供�
 
 ## 应用身份与数据
 
-正式版沿用原版 PiliPlus：Windows 程序为 `piliplus.exe`，公司/产品标识及数据目录
-与原版相同；iOS Bundle ID 为 `com.example.piliplus`。只隔离开发测试版。
-iPad 自签时需保持已安装版本的 Bundle ID 和签名配置，才能覆盖并沿用数据。
+Windows 正式版沿用原版 PiliPlus：程序为 `piliplus.exe`，公司/产品标识及数据目录
+与原版相同，只隔离开发测试版的数据。
+
+iOS 构建默认 Bundle ID：正式版 `com.spy.piliPlus`，开发版 `com.spy.piliplus.dev`。
+用户自签时可以自行改写；要覆盖并沿用旧数据，最终安装的 Bundle ID 和签名配置
+需要与已安装版本兼容。旧构建按其自身报告记录的 ID 校验，不必仅因默认值变化重编。
 
 Android 覆盖安装还要求签名与官方相同。上游使用私有签名，现有自签密钥不匹配，
 因此按用户决定暂缓正式 Android 包，保留官方安装与数据。自签旧隔离版留作历史测试包。

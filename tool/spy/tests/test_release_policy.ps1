@@ -8,4 +8,9 @@ $release.androidVersionCode *= 100
 $rejected = $false
 try { Assert-SpyReleasePolicy $source $release } catch { $rejected = $true }
 if (-not $rejected) { throw 'An inflated Android versionCode could block later upstream updates' }
+$release = Get-Content -LiteralPath (Join-Path $source 'tool/spy/release.json') -Raw | ConvertFrom-Json
+$release.iosDevelopmentBundleId = $release.iosBundleId.ToLowerInvariant()
+$rejected = $false
+try { Assert-SpyReleasePolicy $source $release } catch { $rejected = $true }
+if (-not $rejected) { throw 'Development and release need distinct effective defaults' }
 Write-Output 'Parallel/vertical display rules and upstream native build-number guards passed.'

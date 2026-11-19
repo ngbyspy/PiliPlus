@@ -12,7 +12,10 @@ import zipfile
 from pathlib import Path
 
 
-def verify_ipa(ipa: Path) -> dict:
+def verify_ipa(ipa: Path, expected_bundle_id: str | None = None) -> dict:
+    if expected_bundle_id is None:
+        config = json.loads(Path(__file__).with_name('release.json').read_text(encoding='utf-8-sig'))
+        expected_bundle_id = config['iosBundleId']
     with zipfile.ZipFile(ipa) as archive:
         if archive.testzip() is not None:
             raise ValueError('IPA ZIP integrity check failed')
@@ -23,8 +26,8 @@ def verify_ipa(ipa: Path) -> dict:
         if apps != ['Payload/Runner.app/Info.plist']:
             raise ValueError('IPA must contain one Payload/Runner.app')
         info = plistlib.loads(archive.read(apps[0]))
-        if info['CFBundleIdentifier'] != 'com.example.piliplus':
-            raise ValueError('Bundle identifier would not inherit upstream data')
+        if info['CFBundleIdentifier'] != expected_bundle_id:
+            raise ValueError('Bundle identifier differs from the expected build identity')
         if info['CFBundleDisplayName'] != 'PiliPlus':
             raise ValueError('Unexpected release application name')
         if 2 not in info.get('UIDeviceFamily', []):
@@ -64,9 +67,10 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--build-id')
     parser.add_argument('--verify', type=Path)
+    parser.add_argument('--expected-bundle-id', help='Expected original ID when verifying an earlier build')
     args = parser.parse_args()
     if args.verify:
-        print(json.dumps(verify_ipa(args.verify), ensure_ascii=False, indent=2))
+        print(json.dumps(verify_ipa(args.verify, args.expected_bundle_id), ensure_ascii=False, indent=2))
         return
     if sys.platform != 'darwin':
         parser.error('Native packaging requires macOS')
@@ -89,7 +93,7 @@ def main():
         subprocess.run(['codesign', '--verify', str(framework)], check=True)
     ipa = args.output.resolve() / f'PiliPlus-SPY-{args.build_id}-ipad-unsigned.ipa'
     subprocess.run(['zip', '-qry', str(ipa), 'Payload'], cwd=args.output, check=True)
-    report = verify_ipa(ipa)
+    report = verify_ipa(ipa, args.expected_bundle_id)
     report['architectures'] = arches
     report['frameworksAdhocVerified'] = len(frameworks)
     (args.output / 'ipa-verification.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

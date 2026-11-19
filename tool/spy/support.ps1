@@ -36,7 +36,11 @@ function Assert-SpyReleasePolicy([string]$Source, $Release) {
     $display = Get-SpyDisplayVersion $version $Release.relationship $Release.improvementRevision @($Release.upstreamFixes)
     if ($Release.version -cne $version -or $Release.displayVersion -cne $display) { throw 'Release version does not follow the upstream/parallel/vertical policy' }
     if ($Release.androidVersionCode -ne $code -or $Release.iosBuildNumber -cne "$code") { throw 'Native build numbers must retain the upstream baseline; do not multiply or count downstream commits' }
-    if ($Release.applicationId -cne 'com.example.piliplus' -or $Release.windowsExecutable -cne 'piliplus.exe') { throw 'Formal releases must retain upstream application identity' }
+    if ($Release.applicationId -cne 'com.example.piliplus' -or $Release.windowsExecutable -cne 'piliplus.exe') { throw 'Windows/Android formal identity must match upstream; iOS defaults are configured separately' }
+    foreach ($bundleId in @($Release.iosBundleId,$Release.iosDevelopmentBundleId)) {
+        if ($bundleId -cnotmatch '^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$') { throw 'Invalid iOS default Bundle ID' }
+    }
+    if ($Release.iosBundleId -eq $Release.iosDevelopmentBundleId -or $Release.iosDevelopmentBundleId -cnotmatch '\.dev$') { throw 'iOS development identity must be distinct and end in .dev' }
 }
 
 function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {

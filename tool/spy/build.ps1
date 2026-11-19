@@ -105,9 +105,9 @@ try {
         'iOS' {
             Invoke-SpyNative $sdk.executable (@('build','ios','--no-codesign') + $common + @('--build-number',"$($context.release.iosBuildNumber)")) $context.source
             $directory = Join-Path $OutputRoot 'ipad'
-            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$context.release.displayVersion)
+            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$context.release.displayVersion,'--expected-bundle-id',$context.release.iosBundleId)
             $native = Get-Content -LiteralPath (Join-Path $directory 'ipa-verification.json') -Raw | ConvertFrom-Json
-            if ($native.bundleIdentifier -cne $context.release.applicationId -or $native.version -cne $context.release.version -or $native.buildNumber -cne $context.release.iosBuildNumber) { throw 'IPA identity/build version would not retain upstream update compatibility' }
+            if ($native.bundleIdentifier -cne $context.release.iosBundleId -or $native.version -cne $context.release.version -or $native.buildNumber -cne $context.release.iosBuildNumber) { throw 'IPA identity/build version differs from the configured iOS release' }
             $artifact=$native.ipa;$report.ipaVerification=$native
         }
     }

@@ -30,6 +30,12 @@ if (Test-Path -LiteralPath $manifestPath) { $manifest = Get-Content -LiteralPath
 else {
     $manifest = [pscustomobject]@{product='PiliPlus-SPY';version=$report.release.displayVersion;title=$report.release.displayVersion;date=[DateTime]::Now.ToString('yyyy-MM-dd');historical=$false;highlights=@('与 B 站官方网页、客户端互通的放映厅；修复历史记录布局溢出。','Windows 正式版沿用原版程序标识与数据位置，测试版保持独立。','iPad 覆盖安装时，自签所用的最终 Bundle ID 和签名配置应与已安装版本一致。');pendingPlatforms=@();artifacts=@()}
 }
+$isAcceptance = $report.PSObject.Properties['buildKind'] -and $report.buildKind -eq 'acceptance'
+if ($isAcceptance) {
+    if ($report.platform -ne 'iOS' -or $report.sourceBranch -ne 'spy/dev' -or $tag -notmatch '-acceptance-[0-9a-f]{8}$') { throw 'Acceptance package provenance is invalid' }
+    $manifest.title = "$($report.release.displayVersion) · iPad 功能验收版"
+    $manifest.highlights = @('开发分支的新功能验收包，尚待真机确认。','安装前需要自行签名；使用与已安装版本一致的最终 Bundle ID 和签名配置可保持数据继承。')
+}
 $manifest | Add-Member -NotePropertyMembers @{upstreamVersion=$report.release.version;relationship=$report.release.relationship;platformStatus=@{}} -Force
 if (-not $report.release.androidReleaseEnabled) {
     $manifest.platformStatus['Android'] = @{label='暂缓发行';detail='需要官方签名才能覆盖原版，现阶段保留官方安装。'}
@@ -38,6 +44,7 @@ $entry = [pscustomobject]@{platform=$platform;file="$platform/$name";sha256=$rep
 $manifest.artifacts = @($manifest.artifacts | Where-Object platform -ne $platform) + @($entry)
 $completed = @($manifest.artifacts | ForEach-Object platform)
 $manifest.pendingPlatforms = @(@('Windows','Android','iPad') | Where-Object { $_ -notin $completed })
+if ($isAcceptance) { $manifest.pendingPlatforms = @() }
 $encoding = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 30)+"`n",$encoding)
 $report.artifact.path = $destination

@@ -5,23 +5,34 @@ param(
     [string]$SdkRoot,
     [string]$OutputRoot,
     [string]$ProxyUrl,
+    [switch]$AcceptanceBuild,
     [switch]$ValidateOnly,
     [switch]$Offline
 )
 . (Join-Path $PSScriptRoot 'support.ps1')
 if ($Platform -eq 'iOS' -and -not $IsMacOS) { throw 'Build iPad IPA on a GitHub macOS runner' }
 $context = Get-SpyContext $SourceRoot $CacheRoot
-if (-not $ValidateOnly -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
+if ($AcceptanceBuild -and ($ValidateOnly -or $Platform -ne 'iOS' -or $context.branch -ne 'spy/dev' -or -not $OutputRoot)) { throw 'Acceptance packages require iOS, spy/dev and an explicit OutputRoot' }
+if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $context.release.androidReleaseEnabled) { throw 'Android formal release is deferred: upstream private signing certificate is required for in-place updates. Do not uninstall the official app.' }
-$registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly
+$registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
+$packageBuildId = $context.release.displayVersion
+if ($AcceptanceBuild) {
+    $suffix = "acceptance-$($context.commit.Substring(0,8))"
+    $context.release.tag += "-$suffix"
+    $packageBuildId += "-$suffix"
+}
 if (-not $OutputRoot) {
     $OutputRoot = if ($ValidateOnly) { Join-Path $context.source ".spy-build/validation/$Platform" } else { Join-Path (Split-Path -Parent $context.source) ".build/release-staging/$($context.release.tag)/$Platform" }
 }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $reportPath = Join-Path $OutputRoot ("build-$($Platform.ToLowerInvariant()).json")
 $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.commit;sourceDirty=[bool]$status;upstreamCommit=$context.release.upstreamCommit;release=$context.release;startedOn=[DateTimeOffset]::UtcNow.ToString('o');nativeAcceptance='upstream-compatible identity restored; overwrite/data-retention acceptance pending';networkRecovery='deferred by user'}
+$report.sourceBranch = $context.branch
+$report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
+if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }
 if ($ProxyUrl) {
     $proxy = [uri]$ProxyUrl
     if ($proxy.Scheme -ne 'http' -or $proxy.UserInfo) { throw 'Use an HTTP proxy without credentials' }
@@ -106,7 +117,7 @@ try {
         'iOS' {
             Invoke-SpyNative $sdk.executable (@('build','ios','--no-codesign') + $common + @('--build-number',"$($context.release.iosBuildNumber)")) $context.source
             $directory = Join-Path $OutputRoot 'ipad'
-            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$context.release.displayVersion,'--expected-bundle-id',$context.release.iosBundleId)
+            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$packageBuildId,'--expected-bundle-id',$context.release.iosBundleId)
             $native = Get-Content -LiteralPath (Join-Path $directory 'ipa-verification.json') -Raw | ConvertFrom-Json
             if ($native.bundleIdentifier -cne $context.release.iosBundleId -or $native.version -cne $context.release.version -or $native.buildNumber -cne $context.release.iosBuildNumber) { throw 'IPA identity/build version differs from the configured iOS release' }
             $artifact=$native.ipa;$report.ipaVerification=$native

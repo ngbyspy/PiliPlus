@@ -82,6 +82,11 @@ mixin AudioNormalizationMixin {
   }
 
   String? _alimiter;
+  Player? _alimiterPlayer;
+
+  // The pinned iOS video-default framework only enables overlay/equalizer;
+  // requesting alimiter there would fail to build the audio filter chain.
+  bool get supportsVolumeLimiter => !Platform.isIOS;
 
   /// mpv 的 volume 属性是三次方曲线（`gain = (volume / 100) ^ 3`），且这层
   /// 增益直接乘在 PCM 样值上：200% 就是 8 倍（+18dB），300% 是 27 倍
@@ -99,10 +104,20 @@ mixin AudioNormalizationMixin {
   /// mpv 的 af 链作用在 lavfi-complex（音频归一化）之后、实际输出之前
   /// （见 mpv 手册 --lavfi-complex 一节），两层互不冲突。
   ///
-  /// [volume] 为线性倍数，1.0 即 100%
-  Future<void>? setVolumeCapped(Player? player, double volume) {
+  /// iOS 的精简库没有 alimiter，改用 mpv 自身的音量增益，需接受高音量失真。
+  /// [volume] 为音量比例，1.0 即 100%
+  Future<void> setVolumeCapped(Player? player, double volume) async {
     assert(volume >= 0);
-    if (player == null) return null;
+    if (player == null) return;
+    if (!identical(player, _alimiterPlayer)) {
+      _alimiterPlayer = player;
+      _alimiter = null;
+    }
+    if (volume > 1 && !supportsVolumeLimiter) {
+      // Raise mpv's adjustable ceiling, without changing device output volume.
+      player.setProperty('volume-max', (volume * 100).ceil().toString());
+      return player.setVolume(volume * 100);
+    }
     final boost = _boostAf(volume);
     if (boost == null) {
       if (_alimiter != null) {

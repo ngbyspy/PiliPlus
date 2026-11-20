@@ -8,6 +8,7 @@ import 'package:PiliPlus/models/common/super_resolution_type.dart';
 import 'package:PiliPlus/models/common/video/subtitle_pref_type.dart';
 import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/pages/fullscreen_sc.dart';
+import 'package:PiliPlus/pages/setting/widgets/mixed_playback_volume_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/slider_dialog.dart';
 import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
@@ -29,6 +30,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:material_ui/material_ui.dart';
 
 List<SettingsModel> get playSettings => [
+  if (PlatformUtils.isMobile) mixedPlaybackSetting,
   NormalModel(
     onTap: (context, setState) => Get.toNamed('/playSpeedSet'),
     leading: const Icon(Icons.speed_outlined),
@@ -221,10 +223,17 @@ List<SettingsModel> get playSettings => [
   ),
   if (kDebugMode || PlatformUtils.isMobile)
     NormalModel(
-      title: '播放器音量',
+      getTitle: () => Pref.mixWithOthers ? 'PiliPlus 相对音量' : '播放器音量',
       leading: const Icon(Icons.volume_up),
-      getSubtitle: () => '当前:「${Pref.playerVolume.toStringAsFixed(0)}%」',
-      onTap: showPlayerVolumeDialog,
+      getSubtitle: () =>
+          '当前:「${(Pref.mixWithOthers ? Pref.mixWithOthersVolume : Pref.playerVolume).toStringAsFixed(0)}%」',
+      onTap: (context, setState) {
+        if (Pref.mixWithOthers) {
+          showMixedPlaybackVolumeDialog(context).whenComplete(setState);
+        } else {
+          showPlayerVolumeDialog(context, setState);
+        }
+      },
     )
   else
     NormalModel(
@@ -326,21 +335,6 @@ List<SettingsModel> get playSettings => [
     defaultVal: false,
   ),
   if (PlatformUtils.isMobile)
-    SwitchModel(
-      title: '与其他应用一起播放',
-      subtitle: '允许直播、视频和音频与其他应用的声音同时播放，效果受系统和其他应用限制',
-      leading: const Icon(Icons.library_music_outlined),
-      setKey: SettingBoxKey.mixWithOthers,
-      defaultVal: false,
-      onChanged: (value) async {
-        try {
-          await audioSessionHandler?.setMixWithOthers(value);
-        } catch (_) {
-          SmartDialog.showToast('音频设置应用失败，请重启后重试');
-        }
-      },
-    ),
-  if (PlatformUtils.isMobile)
     const SwitchModel(
       title: '后台播放',
       subtitle: '进入后台时继续播放',
@@ -435,6 +429,36 @@ List<SettingsModel> get playSettings => [
     defaultVal: false,
   ),
 ];
+
+SettingsModel get mixedPlaybackSetting => SplitModel(
+  normalModel: const NormalModel.split(
+    title: '与其他应用一起播放',
+    subtitle: '允许直播、视频和音频与其他应用同时播放；开启后点此设置 PiliPlus 相对音量（0–200%）',
+    leading: Icon(Icons.library_music_outlined),
+  ),
+  switchModel: SwitchModel.split(
+    setKey: SettingBoxKey.mixWithOthers,
+    defaultVal: false,
+    onChanged: (value) async {
+      try {
+        await audioSessionHandler?.setMixWithOthers(value);
+      } catch (_) {
+        SmartDialog.showToast('音频设置应用失败，请重启后重试');
+      }
+    },
+    onTap: showMixedPlaybackVolumeDialog,
+  ),
+);
+
+Future<void> showMixedPlaybackVolumeDialog(BuildContext context) =>
+    showDialog<void>(
+      context: context,
+      builder: (context) => MixedPlaybackVolumeDialog(
+        value: Pref.mixWithOthersVolume,
+        onChanged: (value) =>
+            GStorage.setting.put(SettingBoxKey.mixWithOthersVolume, value),
+      ),
+    );
 
 Future<void> _showSubtitleDialog(
   BuildContext context,

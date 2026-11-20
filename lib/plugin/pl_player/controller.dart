@@ -30,6 +30,7 @@ import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:PiliPlus/services/service_locator.dart';
+import 'package:PiliPlus/services/mobile_playback_volume.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/android/android_helper.dart';
 import 'package:PiliPlus/utils/android/bindings.g.dart';
@@ -114,7 +115,39 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
   final RxDouble volume = RxDouble(
-    PlatformUtils.isDesktop ? Pref.desktopVolume : 1.0,
+    PlatformUtils.isDesktop
+        ? Pref.desktopVolume
+        : Pref.mixWithOthers
+        ? Pref.mixWithOthersVolume / 100
+        : 1.0,
+  );
+  bool get useRelativeVolume => PlatformUtils.isMobile && Pref.mixWithOthers;
+
+  late final _mobileVolume = MobilePlaybackVolume(
+    mixing: Pref.mixWithOthers,
+    relativeVolume: Pref.mixWithOthersVolume / 100,
+    normalPlayerVolume: Pref.playerVolume / 100,
+    setPlayerVolume: (value) async {
+      await setVolumeCapped(_videoPlayerController, value);
+    },
+    setSystemVolume: (value) async {
+      await FlutterVolumeController.updateShowSystemUI(false);
+      await FlutterVolumeController.setVolume(value);
+    },
+    saveRelativeVolume: (value) => setting.put(
+      SettingBoxKey.mixWithOthersVolume,
+      (value * 100).roundToDouble(),
+    ),
+    onDisplayChanged: (value) => volume.value = value,
+  );
+
+  void observeSystemVolume(double value) =>
+      _mobileVolume.observeSystemVolume(value);
+
+  Future<void> _syncMobileVolume() => _mobileVolume.configure(
+    mixing: Pref.mixWithOthers,
+    relativeVolume: Pref.mixWithOthersVolume / 100,
+    normalPlayerVolume: Pref.playerVolume / 100,
   );
   final setSystemBrightness = Pref.setSystemBrightness;
 
@@ -860,9 +893,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     );
 
     // >100% 的音量走 af 增益+限幅，避免直接放大 mpv volume 导致削波
+    if (PlatformUtils.isMobile) await _syncMobileVolume();
     await setVolumeCapped(
       player,
-      PlatformUtils.isMobile ? Pref.playerVolume / 100 : volume.value,
+      PlatformUtils.isMobile ? _mobileVolume.playerVolume : volume.value,
     );
 
     assert(_videoController == null);
@@ -1032,6 +1066,17 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     assert(_subscriptions == null);
     final stream = player.stream;
     _subscriptions = [
+      if (PlatformUtils.isMobile)
+        setting.watch().listen((event) {
+          if (event.key == SettingBoxKey.mixWithOthers ||
+              event.key == SettingBoxKey.mixWithOthersVolume ||
+              event.key == SettingBoxKey.playerVolume) {
+            _syncMobileVolume().onError((error, stackTrace) {
+              if (kDebugMode) debugPrint('sync mobile volume failed: $error');
+            });
+          }
+        }),
+
       /// playing
       stream.playing.listen((bool playing) {
         if (playing) {
@@ -1279,9 +1324,19 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Timer? volumeTimer;
   bool volumeInterceptEventStream = false;
 
-  final double maxVolume = PlatformUtils.isDesktop ? Pref.maxVolume : 1.0;
+  double get maxVolume => PlatformUtils.isDesktop
+      ? Pref.maxVolume
+      : useRelativeVolume
+      ? MobilePlaybackVolume.maxRelativeVolume
+      : 1.0;
   Future<void> setVolume(double volume, {bool showIndicator = true}) async {
-    if (this.volume.value != volume) {
+    if (PlatformUtils.isMobile) {
+      try {
+        await _mobileVolume.setVolume(volume);
+      } catch (err) {
+        if (kDebugMode) debugPrint(err.toString());
+      }
+    } else if (this.volume.value != volume) {
       this.volume.value = volume;
       try {
         if (PlatformUtils.isDesktop) {

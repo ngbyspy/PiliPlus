@@ -680,6 +680,14 @@ abstract final class Pref {
   static bool get mixWithOthers =>
       _setting.get(SettingBoxKey.mixWithOthers, defaultValue: false);
 
+  static double get mixWithOthersVolume => (_setting.get(
+    SettingBoxKey.mixWithOthersVolume,
+    defaultValue: 100.0,
+  ) as num).toDouble().clamp(0.0, 200.0);
+
+  static double get mobilePlayerVolume =>
+      (mixWithOthers ? mixWithOthersVolume : playerVolume) / 100;
+
   static bool get disableLikeMsg =>
       _setting.get(SettingBoxKey.disableLikeMsg, defaultValue: false);
 

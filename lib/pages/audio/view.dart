@@ -19,7 +19,7 @@ import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/pages/audio/controller.dart';
 import 'package:PiliPlus/pages/audio/volume_button.dart';
 import 'package:PiliPlus/pages/setting/models/play_settings.dart'
-    show showPlayerVolumeDialog;
+    show showPlayerVolumeDialog, showMixedPlaybackVolumeDialog;
 import 'package:PiliPlus/pages/video/introduction/ugc/widgets/action_item.dart';
 import 'package:PiliPlus/pages/video/widgets/header_control.dart'
     show HeaderControlState;
@@ -35,6 +35,7 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -642,16 +643,23 @@ class _AudioPageState extends State<AudioPage> {
                     dense: true,
                     leading: const Icon(Icons.volume_up, size: 20),
                     title: Text(
-                      '播放器音量: ${player.getProperty('volume').subLength(3)}%',
+                      Pref.mixWithOthers
+                          ? 'PiliPlus 相对音量: ${Pref.mixWithOthersVolume.round()}%'
+                          : '播放器音量: ${player.getProperty('volume').subLength(3)}%',
                       style: const TextStyle(fontSize: 14),
                     ),
                     onTap: () {
                       Get.back();
-                      showPlayerVolumeDialog(
-                        context,
-                        () {},
-                        onChanged: player.setVolume,
-                      );
+                      if (Pref.mixWithOthers) {
+                        showMixedPlaybackVolumeDialog(context);
+                      } else {
+                        showPlayerVolumeDialog(
+                          context,
+                          () {},
+                          onChanged: (value) =>
+                              _controller.setVolumeCapped(player, value / 100),
+                        );
+                      }
                     },
                   ),
               ],

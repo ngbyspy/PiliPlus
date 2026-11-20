@@ -965,7 +965,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (_videoPlayerController case final ctr? when (ctr.current.isNotEmpty)) {
       var media = ctr.current.last;
       if (!isLive) media = media.copyWith(start: ctr.state.position);
-      return ctr.open(media, play: true);
+      return () async {
+        await ctr.open(media, play: false);
+        await play();
+      }();
     }
     return null;
   }
@@ -1228,9 +1231,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       await seekTo(Duration.zero);
     }
 
+    if (await audioSessionHandler?.setActive(true) == false) return;
     await _videoPlayerController?.play();
-
-    audioSessionHandler?.setActive(true);
 
     playerStatus = .playing;
     WatchroomAdapter.instance.observe(this, 'play');
@@ -1377,8 +1379,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   // 双击播放、暂停
   Future<void> onDoubleTapCenter() async {
     if (!isLive && isCompleted) {
-      await videoPlayerController!.seek(Duration.zero);
-      await videoPlayerController!.play();
+      await play(repeat: true, hideControls: false);
     } else if (videoPlayerController!.state.playing) {
       await pause();
     } else {

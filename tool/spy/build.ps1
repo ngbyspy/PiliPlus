@@ -45,8 +45,9 @@ try {
     Assert-SpyDependencyLock $lock (Join-Path $context.source 'pubspec.lock') $pathPackages
     $report.resolvedLockSha256 = Get-SpyHash (Join-Path $context.source 'pubspec.lock')
     $paths = @('lib/features/watchroom','test/watchroom','test/release_identity_test.dart','lib/utils/runtime_identity.dart','lib/common/constants.dart','lib/main.dart','lib/utils/cache_manager.dart','lib/utils/desktop/window_controller.dart','lib/pages/mine/view.dart','lib/utils/app_scheme.dart','lib/pages/video/controller.dart','lib/pages/video/view.dart','lib/pages/video/introduction/pgc/view.dart','lib/pages/video/introduction/pgc/controller.dart','lib/models_new/pgc/pgc_info_model/result.dart','lib/plugin/pl_player/controller.dart','lib/pages/video/widgets/header_control.dart','lib/pages/video/widgets/player_focus.dart','lib/pages/history/view.dart','lib/pages/history/widgets/item.dart')
+    $paths += @('lib/services/audio_session.dart','lib/services/playback_audio_session.dart','lib/services/service_locator.dart','lib/pages/audio/controller.dart','lib/pages/setting/models/play_settings.dart','lib/plugin/pl_player/view/view.dart','test/services')
     Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + $paths) $context.source
-    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/release_identity_test.dart') $context.source
+    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/services','test/release_identity_test.dart') $context.source
     $report.validation = @{analysis=$true;tests=$true}
     if ($ValidateOnly) { $report.configuration='validation-only'; Write-SpyJson $report $reportPath; return }
     $defines = Join-Path $context.source '.spy-build/release-defines.json'

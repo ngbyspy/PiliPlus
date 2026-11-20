@@ -220,8 +220,8 @@ class AudioController extends GetxController
 
   Future<void>? onPlay() async {
     if (player == null) return;
+    if (await audioSessionHandler?.setActive(true) == false) return;
     await player?.play();
-    await audioSessionHandler?.setActive(true);
   }
 
   Future<void>? onPause() async {

@@ -326,6 +326,21 @@ List<SettingsModel> get playSettings => [
     defaultVal: false,
   ),
   if (PlatformUtils.isMobile)
+    SwitchModel(
+      title: '与其他应用一起播放',
+      subtitle: '允许直播、视频和音频与其他应用的声音同时播放，效果受系统和其他应用限制',
+      leading: const Icon(Icons.library_music_outlined),
+      setKey: SettingBoxKey.mixWithOthers,
+      defaultVal: false,
+      onChanged: (value) async {
+        try {
+          await audioSessionHandler?.setMixWithOthers(value);
+        } catch (_) {
+          SmartDialog.showToast('音频设置应用失败，请重启后重试');
+        }
+      },
+    ),
+  if (PlatformUtils.isMobile)
     const SwitchModel(
       title: '后台播放',
       subtitle: '进入后台时继续播放',

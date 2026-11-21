@@ -488,10 +488,12 @@ class HeaderControlState extends State<HeaderControl>
                   descStyle: subTitleStyle,
                 ),
                 if (PlatformUtils.isMobile)
-                  if (plPlayerController.videoPlayerController
-                      case final player?)
-                    Builder(
-                      builder: (context) => ListTile(
+                  if (plPlayerController.videoPlayerController != null)
+                    StreamBuilder(
+                      stream: GStorage.setting.watch(
+                        key: SettingBoxKey.playerVolume,
+                      ),
+                      builder: (context, snapshot) => ListTile(
                         dense: true,
                         leading: const Icon(Icons.volume_up, size: 20),
                         title: const Text('播放器音量'),
@@ -501,7 +503,6 @@ class HeaderControlState extends State<HeaderControl>
                         onTap: () => showPlayerVolumeDialog(
                           context,
                           () => (context as Element).markNeedsBuild(),
-                          onChanged: player.setVolume,
                         ),
                       ),
                     ),

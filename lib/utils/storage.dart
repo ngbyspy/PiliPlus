@@ -9,6 +9,7 @@ import 'package:PiliPlus/utils/accounts/account_adapter.dart';
 import 'package:PiliPlus/utils/accounts/account_type_adapter.dart';
 import 'package:PiliPlus/utils/accounts/cookie_jar_adapter.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
+import 'package:PiliPlus/utils/player_volume.dart';
 import 'package:PiliPlus/utils/set_int_adapter.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -64,6 +65,8 @@ abstract final class GStorage {
       ).then((res) => watchProgress = res),
     ]);
 
+    await PlayerVolume.migrate(setting);
+
     if (Pref.saveReply) {
       reply = await Hive.openBox<Uint8List>(
         'reply',
@@ -91,7 +94,10 @@ abstract final class GStorage {
     Map<String, dynamic> map,
   ) {
     return Future.wait([
-      setting.clear().then((_) => setting.putAll(map[setting.name])),
+      setting.clear().then((_) async {
+        await setting.putAll(map[setting.name]);
+        await PlayerVolume.migrate(setting);
+      }),
       video.clear().then((_) => video.putAll(map[video.name])),
     ]);
   }

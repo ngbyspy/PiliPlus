@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:PiliPlus/grpc/audio.dart';
@@ -220,8 +222,8 @@ class AudioController extends GetxController
 
   Future<void>? onPlay() async {
     if (player == null) return;
+    if (await audioSessionHandler?.setActive(true) == false) return;
     await player?.play();
-    await audioSessionHandler?.setActive(true);
   }
 
   Future<void>? onPause() async {
@@ -421,10 +423,22 @@ class AudioController extends GetxController
     // >100% 的音量走 af 增益+限幅，避免直接放大 mpv volume 导致削波
     await setVolumeCapped(
       player,
-      PlatformUtils.isDesktop ? desktopVolume.value : Pref.playerVolume / 100,
+      PlatformUtils.isDesktop ? desktopVolume.value : Pref.mobilePlayerVolume,
     );
     final stream = player!.stream;
     _subscriptions = [
+      if (PlatformUtils.isMobile)
+        GStorage.setting.watch().listen((event) {
+          if (event.key == SettingBoxKey.mixWithOthers ||
+              event.key == SettingBoxKey.playerVolume) {
+            setVolumeCapped(player, Pref.mobilePlayerVolume).onError((
+              error,
+              stackTrace,
+            ) {
+              if (kDebugMode) debugPrint('sync audio volume failed: $error');
+            });
+          }
+        }),
       stream.position.listen((position) {
         if (isDragging) return;
         final seconds = position.inSeconds;

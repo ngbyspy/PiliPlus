@@ -60,7 +60,7 @@ class _SettingPageState extends State<SettingPage> {
     ),
     _SettingsModel(
       type: .playSetting,
-      subtitle: '双击/长按、全屏、后台播放、弹幕、字幕、底部进度条等',
+      subtitle: '与其他应用一起播放、相对音量、双击/长按、全屏、后台播放、弹幕、字幕等',
       icon: Icon(Icons.touch_app_outlined),
     ),
     _SettingsModel(

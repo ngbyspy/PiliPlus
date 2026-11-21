@@ -1,22 +1,45 @@
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
+import 'package:PiliPlus/services/playback_audio_session.dart';
 import 'package:PiliPlus/services/service_locator.dart';
+import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 
 class AudioSessionHandler {
   late AudioSession _session;
+  late PlaybackAudioSession _playbackSession;
+  late final Future<void> ready;
   bool _shouldResume = false;
 
-  Future<bool> setActive(bool active) {
-    return _session.setActive(active);
+  Future<bool> setActive(bool active) async {
+    await ready;
+    return _playbackSession.setActive(active);
+  }
+
+  Future<void> setMixWithOthers(bool enabled) async {
+    await ready;
+    _shouldResume = false;
+    await _playbackSession.setMixWithOthers(
+      enabled,
+      isPlaying:
+          videoPlayerServiceHandler?.isPlaying?.call() ??
+          PlPlayerController.instance?.playerStatus.isPlaying ??
+          false,
+    );
   }
 
   AudioSessionHandler() {
-    initSession();
+    ready = initSession();
   }
 
   Future<void> initSession() async {
     _session = await AudioSession.instance;
-    _session.configure(const AudioSessionConfiguration.music());
+    _playbackSession = PlaybackAudioSession(
+      session: _session,
+      platform: defaultTargetPlatform,
+      mixWithOthers: Pref.mixWithOthers,
+    );
+    await _playbackSession.configure();
 
     _session.interruptionEventStream.listen(_onInterrupted);
 
@@ -28,6 +51,12 @@ class AudioSessionHandler {
   }
 
   void _onInterrupted(AudioInterruptionEvent event) {
+    // Ignore focus-loss events already queued when we abandoned Android focus.
+    // iOS system interruptions (for example calls) retain their normal handling.
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        _playbackSession.mixWithOthers) {
+      return;
+    }
     if (event.begin) {
       final player = PlPlayerController.instance;
       switch (event.type) {

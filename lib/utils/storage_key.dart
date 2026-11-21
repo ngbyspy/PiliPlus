@@ -46,6 +46,8 @@ abstract final class SettingBoxKey {
       enableQuickDouble = 'enableQuickDouble',
       fullScreenGestureReverse = 'fullScreenGestureReverse',
       enableBackgroundPlay = 'enableBackgroundPlay',
+      mixWithOthers = 'mixWithOthers',
+      mixWithOthersVolume = 'mixWithOthersVolume',
       continuePlayInBackground = 'continuePlayInBackground',
       appRcmd = 'appRcmd',
       rcmdSource = 'rcmdSource',

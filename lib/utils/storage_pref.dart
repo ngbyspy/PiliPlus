@@ -38,6 +38,7 @@ import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/login_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/player_volume.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -677,6 +678,11 @@ abstract final class Pref {
   static bool get enableBackgroundPlay =>
       _setting.get(SettingBoxKey.enableBackgroundPlay, defaultValue: true);
 
+  static bool get mixWithOthers =>
+      _setting.get(SettingBoxKey.mixWithOthers, defaultValue: false);
+
+  static double get mobilePlayerVolume => playerVolume / 100;
+
   static bool get disableLikeMsg =>
       _setting.get(SettingBoxKey.disableLikeMsg, defaultValue: false);
 
@@ -1086,8 +1092,7 @@ abstract final class Pref {
   static int get angleDegrees =>
       _setting.get(SettingBoxKey.angleDegrees, defaultValue: 30);
 
-  static double get playerVolume => // mobile
-      _setting.get(SettingBoxKey.playerVolume, defaultValue: 100.0);
+  static double get playerVolume => PlayerVolume.read(_setting); // mobile
 
   static double get maxVolume => // desktop
       _setting.get(SettingBoxKey.maxVolume, defaultValue: 2.0);

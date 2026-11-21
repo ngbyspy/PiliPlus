@@ -1,8 +1,9 @@
 name: PiliPlus-SPY iPad IPA
+run-name: ${{ github.ref_name == 'spy/dev' && 'iPad acceptance' || 'iPad release' }} · ${{ github.sha }}
 
 on:
   push:
-    branches: [spy/main]
+    branches: [spy/main, spy/dev]
     paths:
       - .github/workflows/spy-ipad.yml
       - lib/**
@@ -28,7 +29,11 @@ concurrency:
 
 jobs:
   build:
-    if: github.repository == 'ngbyspy/PiliPlus' && github.ref == 'refs/heads/spy/main'
+    if: >-
+      github.repository == 'ngbyspy/PiliPlus' &&
+      (github.ref == 'refs/heads/spy/main' ||
+       (github.ref == 'refs/heads/spy/dev' &&
+        (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ipad-acceptance]'))))
     runs-on: ${{ inputs.runner || 'macos-26-intel' }}
     timeout-minutes: 60
     env:
@@ -55,10 +60,11 @@ jobs:
         shell: pwsh
         run: |
           ./tool/spy/build.ps1 -Platform iOS -SdkRoot $env:FLUTTER_ROOT `
+            -AcceptanceBuild:($env:GITHUB_REF -eq 'refs/heads/spy/dev') `
             -OutputRoot (Join-Path $env:RUNNER_TEMP 'PiliPlus-SPY-output')
       - uses: actions/upload-artifact@v7
         with:
-          name: PiliPlus-SPY-ipad-${{ github.run_number }}-${{ github.run_attempt }}
+          name: PiliPlus-SPY-ipad-${{ github.ref_name == 'spy/dev' && 'acceptance-' || '' }}${{ github.run_number }}-${{ github.run_attempt }}
           retention-days: 30
           if-no-files-found: error
           path: |

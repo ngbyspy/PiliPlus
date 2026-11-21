@@ -112,6 +112,7 @@ class NormalModel extends SettingsModel {
   final ValueGetter<String>? getSubtitle;
   final Widget Function(ThemeData theme)? getTrailing;
   final void Function(BuildContext context, VoidCallback setState)? onTap;
+  final Set<String>? listenKeys;
 
   const NormalModel({
     super.subtitle,
@@ -123,6 +124,7 @@ class NormalModel extends SettingsModel {
     this.getSubtitle,
     this.getTrailing,
     this.onTap,
+    this.listenKeys,
   }) : assert(title != null || getTitle != null);
 
   const NormalModel.split({
@@ -134,6 +136,7 @@ class NormalModel extends SettingsModel {
     this.getTitle,
     this.getSubtitle,
     this.getTrailing,
+    this.listenKeys,
   }) : onTap = null,
        assert(title != null || getTitle != null);
 
@@ -143,17 +146,27 @@ class NormalModel extends SettingsModel {
   String? get effectiveSubtitle => subtitle ?? getSubtitle?.call();
 
   @override
-  Widget get widget => NormalItem(
-    title: title,
-    getTitle: getTitle,
-    subtitle: subtitle,
-    getSubtitle: getSubtitle,
-    leading: leading,
-    getTrailing: getTrailing,
-    onTap: onTap,
-    contentPadding: contentPadding,
-    titleStyle: titleStyle,
-  );
+  Widget get widget {
+    Widget buildItem() => NormalItem(
+      title: title,
+      getTitle: getTitle,
+      subtitle: subtitle,
+      getSubtitle: getSubtitle,
+      leading: leading,
+      getTrailing: getTrailing,
+      onTap: onTap,
+      contentPadding: contentPadding,
+      titleStyle: titleStyle,
+    );
+    final keys = listenKeys;
+    if (keys == null) return buildItem();
+    return StreamBuilder(
+      stream: GStorage.setting.watch().where(
+        (event) => keys.contains(event.key),
+      ),
+      builder: (context, snapshot) => buildItem(),
+    );
+  }
 }
 
 class SwitchModel extends SettingsModel {

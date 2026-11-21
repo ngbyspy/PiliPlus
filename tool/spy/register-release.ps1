@@ -10,7 +10,9 @@ if (-not $report.validation.analysis -or -not $report.validation.tests) { throw 
 if ($report.platform -eq 'iOS') {
     $expectedBundleId = if ($report.release.PSObject.Properties['iosBundleId']) { $report.release.iosBundleId } else { $report.release.applicationId }
     if ($report.ipaVerification.bundleIdentifier -cne $expectedBundleId -or $report.ipaVerification.displayName -cne 'PiliPlus') { throw 'IPA does not match its recorded release identity' }
-} elseif ($report.release.applicationId -cne 'com.example.piliplus') { throw 'Isolated test identity cannot be registered as an upstream-compatible formal release' }
+} elseif ($report.platform -eq 'Android') {
+    if (-not $report.androidVerification.updatesPreviousSpy -or -not $report.androidVerification.signatureVerified -or $report.androidVerification.applicationId -cne $report.release.androidApplicationId -or $report.androidVerification.certificateSha256 -cne $report.release.androidCertificateSha256 -or $report.androidVerification.versionCode -ne $report.release.androidPackageVersionCode) { throw 'Android package identity, signature or upgrade verification is incomplete' }
+} elseif ($report.release.applicationId -cne 'com.example.piliplus') { throw 'Windows formal release must retain its upstream identity' }
 if (-not $ArtifactPath) { $ArtifactPath = $report.artifact.path }
 if ((Get-FileHash -LiteralPath $ArtifactPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $report.artifact.sha256) { throw 'Release package checksum mismatch' }
 $platform = switch ($report.platform) { 'Windows' {'Windows'} 'Android' {'Android'} 'iOS' {'iPad'} default {throw 'Unsupported platform'} }
@@ -39,6 +41,9 @@ if ($isAcceptance) {
 $manifest | Add-Member -NotePropertyMembers @{upstreamVersion=$report.release.version;relationship=$report.release.relationship;platformStatus=@{}} -Force
 if (-not $report.release.androidReleaseEnabled) {
     $manifest.platformStatus['Android'] = @{label='暂缓发行';detail='需要官方签名才能覆盖原版，现阶段保留官方安装。'}
+}
+if ($report.platform -eq 'Android') {
+    $manifest.platformStatus['Android'] = @{label='SPY 更新包';detail='沿用用户已有 PiliPlus SPY 的包名与签名，可覆盖旧 SPY；与官方版安装独立。'}
 }
 $entry = [pscustomobject]@{platform=$platform;file="$platform/$name";sha256=$report.artifact.sha256;bytes=(Get-Item -LiteralPath $destination).Length;sourceCommit=$report.sourceCommit}
 $manifest.artifacts = @($manifest.artifacts | Where-Object platform -ne $platform) + @($entry)

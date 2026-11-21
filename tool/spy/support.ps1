@@ -36,11 +36,51 @@ function Assert-SpyReleasePolicy([string]$Source, $Release) {
     $display = Get-SpyDisplayVersion $version $Release.relationship $Release.improvementRevision @($Release.upstreamFixes)
     if ($Release.version -cne $version -or $Release.displayVersion -cne $display) { throw 'Release version does not follow the upstream/parallel/vertical policy' }
     if ($Release.androidVersionCode -ne $code -or $Release.iosBuildNumber -cne "$code") { throw 'Native build numbers must retain the upstream baseline; do not multiply or count downstream commits' }
-    if ($Release.applicationId -cne 'com.example.piliplus' -or $Release.windowsExecutable -cne 'piliplus.exe') { throw 'Windows/Android formal identity must match upstream; iOS defaults are configured separately' }
+    if ($Release.applicationId -cne 'com.example.piliplus' -or $Release.windowsExecutable -cne 'piliplus.exe') { throw 'Windows identity must match upstream; mobile identities are configured separately' }
+    $previous = $Release.androidUpdateFrom
+    if ($Release.androidApplicationId -cne 'com.ngbyspy.piliplus.spy' -or $previous.applicationId -cne $Release.androidApplicationId) { throw 'Android releases must retain the user-selected SPY package identity' }
+    if ($Release.androidCertificateSha256 -cne $previous.certificateSha256 -or $Release.androidCertificateSha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Android certificate must match the preceding SPY package' }
+    if ($Release.androidPackageVersionCode -ne ($previous.versionCode + 1)) { throw 'Android SPY native versionCode must increment its preceding package by one' }
+    if ($previous.sha256 -cnotmatch '^[0-9a-f]{64}$' -or $previous.file -match '(^/|\\|(^|/)\.\.(/|$)|:)') { throw 'Invalid Android upgrade baseline' }
     foreach ($bundleId in @($Release.iosBundleId,$Release.iosDevelopmentBundleId)) {
         if ($bundleId -cnotmatch '^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$') { throw 'Invalid iOS default Bundle ID' }
     }
     if ($Release.iosBundleId -eq $Release.iosDevelopmentBundleId -or $Release.iosDevelopmentBundleId -cnotmatch '\.dev$') { throw 'iOS development identity must be distinct and end in .dev' }
+}
+
+function Get-SpyAndroidTools {
+    $roots = @($env:ANDROID_SDK_ROOT, $env:ANDROID_HOME)
+    if ($IsWindows) { $roots += Join-Path $env:LOCALAPPDATA 'Android/Sdk' }
+    foreach ($root in ($roots | Where-Object { $_ })) {
+        $directory = Join-Path $root 'build-tools'
+        if (-not (Test-Path -LiteralPath $directory)) { continue }
+        foreach ($tools in (Get-ChildItem -LiteralPath $directory -Directory | Sort-Object Name -Descending)) {
+            $aapt = Join-Path $tools.FullName $(if ($IsWindows) { 'aapt.exe' } else { 'aapt' })
+            $signer = Join-Path $tools.FullName $(if ($IsWindows) { 'apksigner.bat' } else { 'apksigner' })
+            if ((Test-Path -LiteralPath $aapt) -and (Test-Path -LiteralPath $signer)) { return @{aapt=$aapt;apksigner=$signer;root=$tools.FullName} }
+        }
+    }
+    throw 'Android build-tools with aapt and apksigner are required for upgrade verification'
+}
+
+function Get-SpyAndroidApkIdentity([string]$Path, $Tools) {
+    $badging = & $Tools.aapt dump badging $Path
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect APK manifest' }
+    $badging = $badging -join "`n"
+    $signature = & $Tools.apksigner verify --verbose --print-certs $Path
+    if ($LASTEXITCODE -ne 0) { throw 'APK signature verification failed' }
+    $signature = $signature -join "`n"
+    $package = [regex]::Match($badging,"(?m)^package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'")
+    $certificates = [regex]::Matches($signature,'(?im)certificate SHA-256 digest: ([0-9a-f]{64})')
+    if (-not $package.Success -or $certificates.Count -ne 1) { throw 'APK must have one package identity and one verified signing certificate' }
+    $abis = [regex]::Matches([regex]::Match($badging,'(?m)^native-code: (.+)$').Groups[1].Value,"'([^']+)'")
+    @{
+        applicationId=$package.Groups[1].Value;versionCode=[int]$package.Groups[2].Value;versionName=$package.Groups[3].Value
+        displayName=[regex]::Match($badging,"(?m)^application-label:'([^']+)'").Groups[1].Value
+        certificateSha256=$certificates[0].Groups[1].Value.ToLowerInvariant()
+        architectures=@($abis | ForEach-Object { $_.Groups[1].Value })
+        signatureVerified=$true;sha256=(Get-SpyHash $Path);buildTools=$Tools.root
+    }
 }
 
 function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {

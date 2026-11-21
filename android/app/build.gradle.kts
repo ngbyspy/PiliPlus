@@ -1,5 +1,6 @@
 import com.android.build.gradle.internal.api.ApkVariantOutputImpl
 import org.jetbrains.kotlin.konan.properties.Properties
+import groovy.json.JsonSlurper
 
 plugins {
     id("com.android.application")
@@ -17,6 +18,8 @@ if (!isBuiltInKotlinEnabled) {
     apply(plugin = "org.jetbrains.kotlin.android")
 }
 
+val spyRelease = JsonSlurper().parse(file("../../tool/spy/release.json")) as Map<*, *>
+
 android {
     namespace = "com.example.piliplus"
     compileSdk = 37
@@ -28,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.piliplus"
+        applicationId = spyRelease["androidApplicationId"] as String
         minSdk = flutter.minSdkVersion
         targetSdk = 37
         versionCode = flutter.versionCode

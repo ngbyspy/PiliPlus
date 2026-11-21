@@ -16,7 +16,7 @@ if ($AcceptanceBuild -and ($ValidateOnly -or $Platform -ne 'iOS' -or $context.br
 if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
-if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $context.release.androidReleaseEnabled) { throw 'Android formal release is deferred: upstream private signing certificate is required for in-place updates. Do not uninstall the official app.' }
+if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
 if ($AcceptanceBuild) {
@@ -33,6 +33,7 @@ $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.comm
 $report.sourceBranch = $context.branch
 $report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
 if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }
+if ($Platform -eq 'Android') { $report.nativeAcceptance = 'installation over the preceding SPY package and mixed-playback acceptance pending' }
 if ($ProxyUrl) {
     $proxy = [uri]$ProxyUrl
     if ($proxy.Scheme -ne 'http' -or $proxy.UserInfo) { throw 'Use an HTTP proxy without credentials' }
@@ -42,6 +43,16 @@ if ($ProxyUrl) {
 }
 $originalLock = [IO.File]::ReadAllBytes((Join-Path $context.source 'pubspec.lock'))
 try {
+    if ($Platform -eq 'Android' -and -not $ValidateOnly) {
+        $androidTools = Get-SpyAndroidTools
+        $baseline = $context.release.androidUpdateFrom
+        $baselinePath = Join-Path (Join-Path (Split-Path -Parent $context.source) 'Releases') $baseline.file
+        $previousApk = Get-SpyAndroidApkIdentity $baselinePath $androidTools
+        foreach ($key in @('applicationId','versionCode','certificateSha256','sha256')) {
+            if ($previousApk[$key] -cne $baseline.$key) { throw "Preceding Android SPY package differs from its recorded $key" }
+        }
+        $report.androidUpdateFrom = $previousApk
+    }
     $sdk = Prepare-SpySdk $context $Platform $SdkRoot
     $report.sdk = $sdk
     if ($Platform -eq 'iOS') { $report.nativeSourcePatches = Prepare-SpyIosSource $context }
@@ -93,7 +104,7 @@ try {
             if ((Get-SpyHash $key) -cne $identity.keystoreSha256) { throw 'Android signing key changed' }
             $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($key,$identity.password,[Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet)
             try {
-                if ($certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256).ToLowerInvariant() -cne $context.release.androidCertificateSha256) { throw 'Signing certificate differs from official PiliPlus: in-place Android updates are impossible with this key' }
+                if ($certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256).ToLowerInvariant() -cne $context.release.androidCertificateSha256) { throw 'Signing certificate differs from the preceding user-selected SPY package' }
             } finally { $certificate.Dispose() }
             $properties = Join-Path $secrets 'android-key.properties'
             [IO.File]::WriteAllText($properties,"storeFile=$($key.Replace('\','/'))`nstorePassword=$($identity.password)`nkeyAlias=$($identity.keyAlias)`nkeyPassword=$($identity.password)`n",[Text.UTF8Encoding]::new($false))
@@ -101,8 +112,12 @@ try {
             $env:GRADLE_USER_HOME=Join-Path $context.cache 'gradle'
             New-Item -ItemType Directory -Path (Join-Path $env:GRADLE_USER_HOME 'init.d') -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
-            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidVersionCode)")) $context.source
+            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
             $builtApk = Join-Path $context.source 'build/app/outputs/flutter-apk/app-release.apk'
+            $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
+            if ($apkIdentity.applicationId -cne $context.release.androidApplicationId -or $apkIdentity.certificateSha256 -cne $previousApk.certificateSha256 -or $apkIdentity.versionCode -ne $context.release.androidPackageVersionCode -or $apkIdentity.versionCode -le $previousApk.versionCode -or $apkIdentity.displayName -cne $context.release.androidDisplayName) { throw 'Built APK cannot update the preceding SPY package with the requested identity' }
+            $apkIdentity['updatesPreviousSpy'] = $true
+            $report.androidVerification = $apkIdentity
             $archive = [IO.Compression.ZipFile]::OpenRead($builtApk)
             try {
                 $abis = @($archive.Entries | Where-Object FullName -Like 'lib/*/*.so' | ForEach-Object { ($_.FullName -split '/')[1] } | Sort-Object -Unique)

@@ -31,25 +31,25 @@ void main() {
   });
 
   test(
-    'mixed gestures cover mute through 200% without changing the device',
+    'mixed gestures cover mute through 300% without changing the device',
     () async {
       final volume = create();
       await volume.setVolume(0.5);
       await volume.setVolume(0);
-      await volume.setVolume(2);
-      expect(player, [0.5, 0, 2]);
-      expect(saved, [0.5, 0, 2]);
+      await volume.setVolume(3);
+      expect(player, [0.5, 0, 3]);
+      expect(saved, [0.5, 0, 3]);
       expect(system, isEmpty);
-      expect(display, 2);
+      expect(display, 3);
     },
   );
 
   test('relative volume remains inside its supported range', () async {
     final volume = create();
-    await volume.setVolume(3);
+    await volume.setVolume(4);
     await volume.setVolume(-1);
-    expect(player, [2, 0]);
-    expect(saved, [2, 0]);
+    expect(player, [3, 0]);
+    expect(saved, [3, 0]);
   });
 
   test('device buttons cannot overwrite the mixed playback level', () {
@@ -143,4 +143,26 @@ void main() {
     expect(saved, isEmpty);
     expect(display, 1.6);
   });
+
+  test(
+    'shared gain is preserved when switching mixed playback off and on',
+    () async {
+      final volume = create(relative: 1.5)..observeSystemVolume(0.4);
+      await volume.configure(
+        mixing: false,
+        relativeVolume: 1.5,
+        normalPlayerVolume: 1.5,
+      );
+      expect(volume.playerVolume, 1.5);
+      expect(display, 0.4);
+      await volume.configure(
+        mixing: true,
+        relativeVolume: 1.5,
+        normalPlayerVolume: 1.5,
+      );
+      expect(display, 1.5);
+      expect(player, isEmpty);
+      expect(system, isEmpty);
+    },
+  );
 }

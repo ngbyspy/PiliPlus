@@ -20,6 +20,7 @@ import 'package:PiliPlus/utils/desktop/window_controller.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/ios/pip_helper.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/player_volume.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -222,19 +223,7 @@ List<SettingsModel> get playSettings => [
     defaultVal: true,
   ),
   if (kDebugMode || PlatformUtils.isMobile)
-    NormalModel(
-      getTitle: () => Pref.mixWithOthers ? 'PiliPlus 相对音量' : '播放器音量',
-      leading: const Icon(Icons.volume_up),
-      getSubtitle: () =>
-          '当前:「${(Pref.mixWithOthers ? Pref.mixWithOthersVolume : Pref.playerVolume).toStringAsFixed(0)}%」',
-      onTap: (context, setState) {
-        if (Pref.mixWithOthers) {
-          showMixedPlaybackVolumeDialog(context).whenComplete(setState);
-        } else {
-          showPlayerVolumeDialog(context, setState);
-        }
-      },
-    )
+    playerVolumeSetting
   else
     NormalModel(
       title: '最高音量',
@@ -433,7 +422,7 @@ List<SettingsModel> get playSettings => [
 SettingsModel get mixedPlaybackSetting => SplitModel(
   normalModel: const NormalModel.split(
     title: '与其他应用一起播放',
-    subtitle: '允许直播、视频和音频与其他应用同时播放；开启后点此设置 PiliPlus 相对音量（0–200%）',
+    subtitle: '允许直播、视频和音频与其他应用同时播放；开启后点此设置 PiliPlus 相对音量（0–300%，与播放器音量同步）',
     leading: Icon(Icons.library_music_outlined),
   ),
   switchModel: SwitchModel.split(
@@ -454,9 +443,9 @@ Future<void> showMixedPlaybackVolumeDialog(BuildContext context) =>
     showDialog<void>(
       context: context,
       builder: (context) => MixedPlaybackVolumeDialog(
-        value: Pref.mixWithOthersVolume,
+        value: Pref.playerVolume,
         onChanged: (value) =>
-            GStorage.setting.put(SettingBoxKey.mixWithOthersVolume, value),
+            GStorage.setting.put(SettingBoxKey.playerVolume, value),
       ),
     );
 
@@ -521,21 +510,28 @@ Future<void> _showAngleDegreesDialog(
   }
 }
 
+SettingsModel get playerVolumeSetting => NormalModel(
+  title: '播放器音量',
+  leading: const Icon(Icons.volume_up),
+  getSubtitle: () => '当前:「${Pref.playerVolume.toStringAsFixed(0)}%」',
+  listenKeys: const {SettingBoxKey.playerVolume},
+  onTap: showPlayerVolumeDialog,
+);
+
 Future<void> showPlayerVolumeDialog(
   BuildContext context,
-  VoidCallback setState, {
-  ValueChanged<double>? onChanged,
-}) {
+  VoidCallback setState,
+) {
+  if (Pref.mixWithOthers) {
+    return showMixedPlaybackVolumeDialog(context).whenComplete(setState);
+  }
   return showVolumeDialog(
     context,
     title: const Text('播放器音量'),
     value: Pref.playerVolume,
     onChanged: (value) => GStorage.setting
         .put(SettingBoxKey.playerVolume, value)
-        .whenComplete(() {
-          setState();
-          onChanged?.call(value);
-        }),
+        .whenComplete(setState),
   );
 }
 
@@ -559,8 +555,8 @@ Future<void> _showMaxVolumeDialog(
   );
 }
 
-const kMinVolume = 100.0;
-const kMaxVolume = 300.0;
+const kMinVolume = PlayerVolume.minPercent;
+const kMaxVolume = PlayerVolume.maxPercent;
 
 Future<void> showVolumeDialog(
   BuildContext context, {
@@ -574,7 +570,7 @@ Future<void> showVolumeDialog(
       title: title,
       min: kMinVolume,
       max: kMaxVolume,
-      divisions: 40,
+      divisions: 60,
       precise: 0,
       value: value,
       suffix: '%',

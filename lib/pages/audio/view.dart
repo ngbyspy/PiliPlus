@@ -19,7 +19,7 @@ import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/pages/audio/controller.dart';
 import 'package:PiliPlus/pages/audio/volume_button.dart';
 import 'package:PiliPlus/pages/setting/models/play_settings.dart'
-    show showPlayerVolumeDialog, showMixedPlaybackVolumeDialog;
+    show showPlayerVolumeDialog;
 import 'package:PiliPlus/pages/video/introduction/ugc/widgets/action_item.dart';
 import 'package:PiliPlus/pages/video/widgets/header_control.dart'
     show HeaderControlState;
@@ -643,23 +643,12 @@ class _AudioPageState extends State<AudioPage> {
                     dense: true,
                     leading: const Icon(Icons.volume_up, size: 20),
                     title: Text(
-                      Pref.mixWithOthers
-                          ? 'PiliPlus 相对音量: ${Pref.mixWithOthersVolume.round()}%'
-                          : '播放器音量: ${player.getProperty('volume').subLength(3)}%',
+                      '播放器音量: ${Pref.playerVolume.toStringAsFixed(0)}%',
                       style: const TextStyle(fontSize: 14),
                     ),
                     onTap: () {
                       Get.back();
-                      if (Pref.mixWithOthers) {
-                        showMixedPlaybackVolumeDialog(context);
-                      } else {
-                        showPlayerVolumeDialog(
-                          context,
-                          () {},
-                          onChanged: (value) =>
-                              _controller.setVolumeCapped(player, value / 100),
-                        );
-                      }
+                      showPlayerVolumeDialog(context, () {});
                     },
                   ),
               ],

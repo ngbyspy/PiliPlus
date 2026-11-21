@@ -430,7 +430,6 @@ class AudioController extends GetxController
       if (PlatformUtils.isMobile)
         GStorage.setting.watch().listen((event) {
           if (event.key == SettingBoxKey.mixWithOthers ||
-              event.key == SettingBoxKey.mixWithOthersVolume ||
               event.key == SettingBoxKey.playerVolume) {
             setVolumeCapped(player, Pref.mobilePlayerVolume).onError((
               error,

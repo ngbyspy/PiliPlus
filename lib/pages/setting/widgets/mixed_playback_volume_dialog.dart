@@ -1,3 +1,4 @@
+import 'package:PiliPlus/utils/player_volume.dart';
 import 'package:material_ui/material_ui.dart';
 
 class MixedPlaybackVolumeDialog extends StatefulWidget {
@@ -16,7 +17,10 @@ class MixedPlaybackVolumeDialog extends StatefulWidget {
 }
 
 class _MixedPlaybackVolumeDialogState extends State<MixedPlaybackVolumeDialog> {
-  late double _value = widget.value.clamp(0.0, 200.0);
+  late double _value = widget.value.clamp(
+    PlayerVolume.minPercent,
+    PlayerVolume.maxPercent,
+  );
 
   void _change(double value) {
     setState(() => _value = value.roundToDouble());
@@ -41,8 +45,8 @@ class _MixedPlaybackVolumeDialogState extends State<MixedPlaybackVolumeDialog> {
               ),
               Slider(
                 min: 0,
-                max: 200,
-                divisions: 200,
+                max: PlayerVolume.maxPercent,
+                divisions: 300,
                 value: _value,
                 label: '${_value.round()}%',
                 semanticFormatterCallback: (value) =>
@@ -53,10 +57,17 @@ class _MixedPlaybackVolumeDialogState extends State<MixedPlaybackVolumeDialog> {
                 alignment: WrapAlignment.spaceBetween,
                 spacing: 8,
                 runSpacing: 4,
-                children: [Text('0%'), Text('100%'), Text('200%')],
+                children: [
+                  Text('0%'),
+                  Text('100%'),
+                  Text('200%'),
+                  Text('300%'),
+                ],
               ),
               const SizedBox(height: 16),
               const Text('只调整 PiliPlus 的声音，立即生效。视频右侧滑动也会调节此音量，设备音量键仍调节系统音量。'),
+              const SizedBox(height: 8),
+              const Text('与设置、视频、直播及音频菜单中的“播放器音量”同步。'),
               const SizedBox(height: 8),
               const Text('100% 为原始音量；100% 以上可增强小音量内容，音量过高时可能失真，请按片源调整。'),
             ],

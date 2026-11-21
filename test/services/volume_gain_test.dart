@@ -38,10 +38,10 @@ void main() {
   });
 
   test(
-    '200% boosts through a limiter without overdriving mpv volume',
+    '300% boosts through a limiter without overdriving mpv volume',
     () async {
       final player = _Player();
-      await _Volume().setVolumeCapped(player, 2);
+      await _Volume().setVolumeCapped(player, 3);
       expect(player.volumes, [100]);
       final filter = player.filters.single;
       expect(filter, contains('alimiter='));
@@ -81,6 +81,9 @@ void main() {
       expect(player.volumes, [200]);
       expect(player.properties, [('volume-max', '200')]);
       expect(player.filters, isEmpty);
+      await volume.setVolumeCapped(player, 3);
+      expect(player.volumes.last, 300);
+      expect(player.properties.last, ('volume-max', '300'));
       await volume.setVolumeCapped(player, 0);
       expect(player.volumes.last, 0);
     },

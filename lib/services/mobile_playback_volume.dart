@@ -1,3 +1,5 @@
+import 'package:PiliPlus/utils/player_volume.dart';
+
 /// Routes the player's gesture volume independently from the device volume
 /// while mixed playback is enabled. Values use 1.0 for 100%.
 class MobilePlaybackVolume {
@@ -11,7 +13,7 @@ class MobilePlaybackVolume {
     required this._onDisplayChanged,
   });
 
-  static const maxRelativeVolume = 2.0;
+  static const maxRelativeVolume = PlayerVolume.maxPercent / 100;
   bool _mixing;
   double _relativeVolume;
   double _normalPlayerVolume;

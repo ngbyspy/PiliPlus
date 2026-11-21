@@ -118,14 +118,14 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     PlatformUtils.isDesktop
         ? Pref.desktopVolume
         : Pref.mixWithOthers
-        ? Pref.mixWithOthersVolume / 100
+        ? Pref.mobilePlayerVolume
         : 1.0,
   );
   bool get useRelativeVolume => PlatformUtils.isMobile && Pref.mixWithOthers;
 
   late final _mobileVolume = MobilePlaybackVolume(
     mixing: Pref.mixWithOthers,
-    relativeVolume: Pref.mixWithOthersVolume / 100,
+    relativeVolume: Pref.mobilePlayerVolume,
     normalPlayerVolume: Pref.playerVolume / 100,
     setPlayerVolume: (value) async {
       await setVolumeCapped(_videoPlayerController, value);
@@ -135,7 +135,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       await FlutterVolumeController.setVolume(value);
     },
     saveRelativeVolume: (value) => setting.put(
-      SettingBoxKey.mixWithOthersVolume,
+      SettingBoxKey.playerVolume,
       (value * 100).roundToDouble(),
     ),
     onDisplayChanged: (value) => volume.value = value,
@@ -146,7 +146,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   Future<void> _syncMobileVolume() => _mobileVolume.configure(
     mixing: Pref.mixWithOthers,
-    relativeVolume: Pref.mixWithOthersVolume / 100,
+    relativeVolume: Pref.mobilePlayerVolume,
     normalPlayerVolume: Pref.playerVolume / 100,
   );
   final setSystemBrightness = Pref.setSystemBrightness;
@@ -1069,7 +1069,6 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       if (PlatformUtils.isMobile)
         setting.watch().listen((event) {
           if (event.key == SettingBoxKey.mixWithOthers ||
-              event.key == SettingBoxKey.mixWithOthersVolume ||
               event.key == SettingBoxKey.playerVolume) {
             _syncMobileVolume().onError((error, stackTrace) {
               if (kDebugMode) debugPrint('sync mobile volume failed: $error');

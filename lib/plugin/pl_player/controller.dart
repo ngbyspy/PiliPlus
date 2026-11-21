@@ -115,18 +115,11 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
   final RxDouble volume = RxDouble(
-    PlatformUtils.isDesktop
-        ? Pref.desktopVolume
-        : Pref.mixWithOthers
-        ? Pref.mobilePlayerVolume
-        : 1.0,
+    PlatformUtils.isDesktop ? Pref.desktopVolume : 1.0,
   );
-  bool get useRelativeVolume => PlatformUtils.isMobile && Pref.mixWithOthers;
 
   late final _mobileVolume = MobilePlaybackVolume(
-    mixing: Pref.mixWithOthers,
-    relativeVolume: Pref.mobilePlayerVolume,
-    normalPlayerVolume: Pref.playerVolume / 100,
+    playerVolume: Pref.mobilePlayerVolume,
     setPlayerVolume: (value) async {
       await setVolumeCapped(_videoPlayerController, value);
     },
@@ -134,10 +127,6 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       await FlutterVolumeController.updateShowSystemUI(false);
       await FlutterVolumeController.setVolume(value);
     },
-    saveRelativeVolume: (value) => setting.put(
-      SettingBoxKey.playerVolume,
-      (value * 100).roundToDouble(),
-    ),
     onDisplayChanged: (value) => volume.value = value,
   );
 
@@ -145,9 +134,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       _mobileVolume.observeSystemVolume(value);
 
   Future<void> _syncMobileVolume() => _mobileVolume.configure(
-    mixing: Pref.mixWithOthers,
-    relativeVolume: Pref.mobilePlayerVolume,
-    normalPlayerVolume: Pref.playerVolume / 100,
+    playerVolume: Pref.mobilePlayerVolume,
   );
   final setSystemBrightness = Pref.setSystemBrightness;
 
@@ -1323,11 +1310,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Timer? volumeTimer;
   bool volumeInterceptEventStream = false;
 
-  double get maxVolume => PlatformUtils.isDesktop
-      ? Pref.maxVolume
-      : useRelativeVolume
-      ? MobilePlaybackVolume.maxRelativeVolume
-      : 1.0;
+  double get maxVolume => PlatformUtils.isDesktop ? Pref.maxVolume : 1.0;
   Future<void> setVolume(double volume, {bool showIndicator = true}) async {
     if (PlatformUtils.isMobile) {
       try {

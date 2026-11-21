@@ -87,7 +87,7 @@ void main() {
     expect(writes.last, 100);
   });
 
-  testWidgets('both entries and a gesture share the displayed saved gain', (
+  testWidgets('both entries share gain while gestures adjust system volume', (
     tester,
   ) async {
     settings.data[SettingBoxKey.mixWithOthers] = true;
@@ -121,19 +121,19 @@ void main() {
     await tester.tap(find.text('完成'));
     await tester.pumpAndSettle();
 
+    final systemWrites = <double>[];
     final volume = MobilePlaybackVolume(
-      mixing: true,
-      relativeVolume: 0.25,
-      normalPlayerVolume: 0.25,
-      setPlayerVolume: (_) async {},
-      setSystemVolume: (_) async => fail('must not change device volume'),
-      saveRelativeVolume: (value) =>
-          settings.put(SettingBoxKey.playerVolume, value * 100),
+      playerVolume: 0.25,
+      setPlayerVolume: (_) async => fail('gesture must not change player gain'),
+      setSystemVolume: (value) async => systemWrites.add(value),
       onDisplayChanged: (_) {},
     );
-    await volume.setVolume(2.5);
+    await volume.setVolume(0.6);
     await tester.pumpAndSettle();
-    expect(find.text('当前:「250%」'), findsOneWidget);
+    expect(systemWrites, [0.6]);
+    expect(volume.playerVolume, 0.25);
+    expect(settings.data[SettingBoxKey.playerVolume], 25);
+    expect(find.text('当前:「25%」'), findsOneWidget);
     expect(
       settings.data.containsKey(SettingBoxKey.mixWithOthersVolume),
       isFalse,

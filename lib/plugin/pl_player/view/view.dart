@@ -168,10 +168,6 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   }
 
   void _onVolumeChanged(double value) {
-    if (mounted && plPlayerController.useRelativeVolume) {
-      plPlayerController.observeSystemVolume(value);
-      return;
-    }
     if (mounted && !plPlayerController.volumeInterceptEventStream) {
       plPlayerController.observeSystemVolume(value);
       if (Platform.isIOS && !FlutterVolumeController.showSystemUI) {
@@ -1508,7 +1504,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                         ),
                         const SizedBox(width: 2.0),
                         Text(
-                          '${plPlayerController.useRelativeVolume ? 'PiliPlus ' : ''}${(volume * 100.0).round()}%',
+                          '${(volume * 100.0).round()}%',
                           style: const TextStyle(
                             fontSize: 13.0,
                             color: Colors.white,

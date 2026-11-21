@@ -65,7 +65,7 @@ class _MixedPlaybackVolumeDialogState extends State<MixedPlaybackVolumeDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text('只调整 PiliPlus 的声音，立即生效。视频右侧滑动也会调节此音量，设备音量键仍调节系统音量。'),
+              const Text('只调整 PiliPlus 的声音，立即生效。视频右侧滑动和设备音量键始终调节系统音量。'),
               const SizedBox(height: 8),
               const Text('与设置、视频、直播及音频菜单中的“播放器音量”同步。'),
               const SizedBox(height: 8),

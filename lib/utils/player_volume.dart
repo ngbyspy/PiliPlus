@@ -1,7 +1,7 @@
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:hive_ce/hive.dart';
 
-/// One player gain shared by settings, player menus and mixed-mode gestures.
+/// One player gain shared by settings and player menus.
 abstract final class PlayerVolume {
   static const minPercent = 0.0;
   static const maxPercent = 300.0;

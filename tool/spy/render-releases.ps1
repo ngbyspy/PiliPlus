@@ -28,5 +28,6 @@ $data = ConvertTo-Json -InputObject $releases -Depth 20 -Compress
 $data = $data.Replace('<','\u003c').Replace('>','\u003e').Replace('&','\u0026')
 $template = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'release-page.html'))
 $output = Join-Path $ReleaseRoot 'index.html'
-[IO.File]::WriteAllText($output,$template.Replace('__RELEASE_DATA__',$data),[Text.UTF8Encoding]::new($false))
+$acceptanceNav = if (Test-Path -LiteralPath (Join-Path $ReleaseRoot 'Testing/index.html')) { '<a href="Testing/index.html">测试包 ↗</a>' } else { '' }
+[IO.File]::WriteAllText($output,$template.Replace('__RELEASE_DATA__',$data).Replace('__ACCEPTANCE_NAV__',$acceptanceNav),[Text.UTF8Encoding]::new($false))
 Write-Output "Local release page: $output ($($releases.Count) versions)"

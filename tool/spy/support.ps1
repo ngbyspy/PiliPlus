@@ -334,7 +334,7 @@ function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [switch]$DebugBuild)
     $version = "1.0.0-$engine"
     $root = Join-Path $Context.cache 'spy/flutter-maven'
     $reports = @()
-    $curl = Join-Path (Split-Path -Parent (Split-Path -Parent (Get-Command git.exe).Source)) 'mingw64/bin/curl.exe'
+    $python = if ($IsWindows) { 'python' } else { 'python3' }
     $mode = if ($DebugBuild) { 'debug' } else { 'release' }
     foreach ($module in @("flutter_embedding_$mode","arm64_v8a_$mode")) {
         foreach ($extension in @('pom','jar')) {
@@ -343,13 +343,8 @@ function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [switch]$DebugBuild)
             $stamp = "$path.verified.json"
             New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
             if (-not (Test-Path -LiteralPath $stamp)) {
-                $headers = "$path.headers"
                 $url = "https://storage.googleapis.com/download.flutter.io/$relative"
-                Invoke-SpyNative $curl @('--http1.1','--fail','--silent','--show-error','--location','--retry','4','--retry-all-errors','--retry-delay','2','--connect-timeout','20','--max-time','180','--dump-header',$headers,'--output',$path,$url)
-                $expected = [regex]::Match([IO.File]::ReadAllText($headers),'(?im)^x-goog-hash:\s*md5=([A-Za-z0-9+/=]+)\s*$').Groups[1].Value
-                $actual = [Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $path -Algorithm MD5).Hash))
-                if (-not $expected -or $actual -cne $expected) { throw 'Official Flutter artifact transfer integrity mismatch' }
-                Write-SpyJson @{url=$url;sha256=(Get-SpyHash $path);googleStorageMd5=$expected;engineCommit=$engine;file=$relative} $stamp
+                Invoke-SpyNative $python @((Join-Path $PSScriptRoot 'download_flutter_artifact.py'),'--url',$url,'--output',$path,'--engine',$engine,'--relative',$relative) | Out-Host
             }
             $record = Get-Content -LiteralPath $stamp -Raw | ConvertFrom-Json
             if ($record.engineCommit -cne $engine -or (Get-SpyHash $path) -cne $record.sha256) { throw 'Cached Flutter artifact changed' }

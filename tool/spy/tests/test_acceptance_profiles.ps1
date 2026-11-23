@@ -4,13 +4,15 @@ $release = Get-Content -LiteralPath (Join-Path $source 'tool/spy/release.json') 
 $android = Get-SpyPackageProfile $release Android $true
 if ($android.mode -cne 'debug' -or $android.applicationId -cne 'com.ngbyspy.piliplus.spy.debug' -or $android.applicationId -in @($release.androidApplicationId,'com.example.piliplus')) { throw 'Android acceptance could replace a formal installation' }
 $ios = Get-SpyPackageProfile $release iOS $true
-if ($ios.applicationId -cne 'com.spy.piliPlus.dev') { throw 'iOS acceptance identity has incorrect spelling or case' }
-if ((Get-SpyPackageProfile $release iOS $false).applicationId -cne 'com.spy.piliPlus') { throw 'Formal IPA identity changed' }
+if ($ios.applicationId -cne 'com.spy.piliPlus.dev' -or $ios.displayName -cne 'PiliPlus SPY Dev') { throw 'iOS acceptance identity/name has incorrect spelling or case' }
+$formalIos = Get-SpyPackageProfile $release iOS $false
+if ($formalIos.applicationId -cne 'com.spy.piliPlus' -or $formalIos.displayName -cne 'PiliPlus') { throw 'Formal IPA identity/name changed' }
 if ((Get-SpyPackageProfile $release Windows $true).mode -cne 'release') { throw 'Windows acceptance must use the upstream-compatible release profile' }
 $projectPath = Join-Path $source 'ios/Runner.xcodeproj/project.pbxproj'
 $original = [IO.File]::ReadAllText($projectPath)
 $prepared = Get-SpyIosAcceptanceProject $original $release
 if ([regex]::Matches($prepared,'PRODUCT_BUNDLE_IDENTIFIER = com\.spy\.piliPlus\.dev;').Count -ne 3 -or $prepared.Contains('PRODUCT_BUNDLE_IDENTIFIER = com.spy.piliPlus;')) { throw 'Release/Profile iOS configurations were not isolated for acceptance' }
+if ([regex]::Matches($prepared,[regex]::Escape('APP_DISPLAY_NAME = "' + $ios.displayName + '";')).Count -ne 2) { throw 'Prepared Release/Profile display names differ from the acceptance package profile' }
 if ([IO.File]::ReadAllText($projectPath) -cne $original) { throw 'Profile check modified the source project' }
 $release.iosDevelopmentBundleId = 'com.spy.piliplus.dev'
 $rejected = $false

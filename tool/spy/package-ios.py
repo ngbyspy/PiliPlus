@@ -12,7 +12,8 @@ import zipfile
 from pathlib import Path
 
 
-def verify_ipa(ipa: Path, expected_bundle_id: str | None = None) -> dict:
+def verify_ipa(ipa: Path, expected_bundle_id: str | None = None,
+               expected_display_name: str = 'PiliPlus') -> dict:
     if expected_bundle_id is None:
         config = json.loads(Path(__file__).with_name('release.json').read_text(encoding='utf-8-sig'))
         expected_bundle_id = config['iosBundleId']
@@ -28,8 +29,11 @@ def verify_ipa(ipa: Path, expected_bundle_id: str | None = None) -> dict:
         info = plistlib.loads(archive.read(apps[0]))
         if info['CFBundleIdentifier'] != expected_bundle_id:
             raise ValueError('Bundle identifier differs from the expected build identity')
-        if info['CFBundleDisplayName'] != 'PiliPlus':
-            raise ValueError('Unexpected release application name')
+        if info['CFBundleDisplayName'] != expected_display_name:
+            raise ValueError(
+                f"Unexpected application display name: {info['CFBundleDisplayName']!r}; "
+                f"expected {expected_display_name!r}"
+            )
         if 2 not in info.get('UIDeviceFamily', []):
             raise ValueError('Build does not support iPad')
         orientations = info.get('UISupportedInterfaceOrientations~ipad', [])
@@ -68,9 +72,12 @@ def main():
     parser.add_argument('--build-id')
     parser.add_argument('--verify', type=Path)
     parser.add_argument('--expected-bundle-id', help='Expected original ID when verifying an earlier build')
+    parser.add_argument('--expected-display-name', default='PiliPlus',
+                        help='Expected application name for the selected release or acceptance profile')
     args = parser.parse_args()
     if args.verify:
-        print(json.dumps(verify_ipa(args.verify, args.expected_bundle_id), ensure_ascii=False, indent=2))
+        print(json.dumps(verify_ipa(args.verify, args.expected_bundle_id,
+                                    args.expected_display_name), ensure_ascii=False, indent=2))
         return
     if sys.platform != 'darwin':
         parser.error('Native packaging requires macOS')
@@ -93,7 +100,7 @@ def main():
         subprocess.run(['codesign', '--verify', str(framework)], check=True)
     ipa = args.output.resolve() / f'PiliPlus-SPY-{args.build_id}-ipad-unsigned.ipa'
     subprocess.run(['zip', '-qry', str(ipa), 'Payload'], cwd=args.output, check=True)
-    report = verify_ipa(ipa, args.expected_bundle_id)
+    report = verify_ipa(ipa, args.expected_bundle_id, args.expected_display_name)
     report['architectures'] = arches
     report['frameworksAdhocVerified'] = len(frameworks)
     (args.output / 'ipa-verification.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

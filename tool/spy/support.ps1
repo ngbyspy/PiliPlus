@@ -91,7 +91,7 @@ function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance) {
             @{mode=$(if ($Acceptance) { 'debug' } else { 'release' });applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { 'PiliPlus SPY debug' } else { $Release.androidDisplayName })}
         }
         'iOS' {
-            @{mode='release';applicationId=$(if ($Acceptance) { $Release.iosDevelopmentBundleId } else { $Release.iosBundleId })}
+            @{mode='release';applicationId=$(if ($Acceptance) { $Release.iosDevelopmentBundleId } else { $Release.iosBundleId });displayName=$(if ($Acceptance) { 'PiliPlus SPY Dev' } else { 'PiliPlus' })}
         }
         'Windows' { @{mode='release';applicationId=$Release.applicationId} }
         default { throw 'Unsupported package platform' }
@@ -103,7 +103,8 @@ function Get-SpyIosAcceptanceProject([string]$Project, $Release) {
     $formal = "PRODUCT_BUNDLE_IDENTIFIER = $($Release.iosBundleId);"
     $development = "PRODUCT_BUNDLE_IDENTIFIER = $($Release.iosDevelopmentBundleId);"
     if ([regex]::Matches($Project,[regex]::Escape($formal)).Count -ne 2 -or [regex]::Matches($Project,[regex]::Escape($development)).Count -ne 1) { throw 'Unexpected iOS project identities before acceptance preparation' }
-    $Project.Replace($formal,$development).Replace('APP_DISPLAY_NAME = PiliPlus;','APP_DISPLAY_NAME = "PiliPlus SPY Dev";')
+    $profile = Get-SpyPackageProfile $Release iOS $true
+    $Project.Replace($formal,$development).Replace('APP_DISPLAY_NAME = PiliPlus;', ('APP_DISPLAY_NAME = "' + $profile.displayName + '";'))
 }
 
 function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {

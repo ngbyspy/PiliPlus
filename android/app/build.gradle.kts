@@ -92,8 +92,12 @@ android {
             )
         }
         debug {
+            signingConfig = signingConfigs["debug"]
             applicationIdSuffix = ".debug"
             resValue("string", "app_name", "PiliPlus SPY debug")
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
         }
     }
 

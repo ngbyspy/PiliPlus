@@ -265,6 +265,7 @@ void _onBack() {
 }
 
 class MyApp extends StatelessWidget {
+  static Map<String, Map<String, int>>? _systemColorRoles;
   const MyApp({super.key});
 
   static ColorScheme? _light, _dark;
@@ -274,8 +275,13 @@ class MyApp extends StatelessWidget {
 
     final ColorScheme lightScheme, darkScheme;
     if (dynamicColor) {
-      lightScheme = _light!;
-      darkScheme = _dark!;
+      if (_systemColorRoles case final roles? when Pref.softDynamicColors) {
+        lightScheme = _light!.withSystemRoles(roles['light']!);
+        darkScheme = _dark!.withSystemRoles(roles['dark']!);
+      } else {
+        lightScheme = _light!;
+        darkScheme = _dark!;
+      }
     } else {
       final customColor = Pref.customColor;
       final brandColor =
@@ -364,7 +370,20 @@ class MyApp extends StatelessWidget {
 
   /// from [DynamicColorBuilderState.initPlatformState]
   static Future<bool> initPlatformState() async {
-    if (_light != null || _dark != null) return true;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final roles = await const MethodChannel('com.example.piliplus/theme')
+            .invokeMapMethod<String, dynamic>('getSystemColorRoles');
+        _systemColorRoles = roles?.map(
+          (mode, colors) =>
+              MapEntry(mode, Map<String, int>.from(colors as Map)),
+        );
+      } on PlatformException {
+        _systemColorRoles = null;
+      } on MissingPluginException {
+        _systemColorRoles = null;
+      }
+    }
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
       final colors = await DynamicColorPlugin.channel.invokeMethod(

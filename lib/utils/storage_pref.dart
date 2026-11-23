@@ -757,6 +757,9 @@ abstract final class Pref {
   static int get customColor =>
       _setting.get(SettingBoxKey.customColor, defaultValue: 0);
 
+  static bool get softDynamicColors =>
+      _setting.get(SettingBoxKey.softDynamicColors, defaultValue: false);
+
   static bool get dynamicColor =>
       !Platform.isIOS &&
       _setting.get(SettingBoxKey.dynamicColor, defaultValue: true);
@@ -784,6 +787,13 @@ abstract final class Pref {
         SettingBoxKey.dynamicBadgeMode,
         defaultValue: DynamicBadgeMode.number.index,
       )];
+
+  static bool get advancedMaterials =>
+      _setting.get(SettingBoxKey.advancedMaterials, defaultValue: false);
+
+  static bool get toolbarScrollMaterials =>
+      advancedMaterials &&
+      _setting.get(SettingBoxKey.toolbarScrollMaterials, defaultValue: false);
 
   static bool get enableMYBar =>
       _setting.get(SettingBoxKey.enableMYBar, defaultValue: true);

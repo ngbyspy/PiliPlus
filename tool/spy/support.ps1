@@ -46,6 +46,7 @@ function Assert-SpyReleasePolicy([string]$Source, $Release) {
         if ($bundleId -cnotmatch '^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$') { throw 'Invalid iOS default Bundle ID' }
     }
     if ($Release.iosBundleId -eq $Release.iosDevelopmentBundleId -or $Release.iosDevelopmentBundleId -cnotmatch '\.dev$') { throw 'iOS development identity must be distinct and end in .dev' }
+    if ($Release.iosBundleId -cne 'com.spy.piliPlus' -or $Release.iosDevelopmentBundleId -cne 'com.spy.piliPlus.dev') { throw 'iOS Bundle IDs must retain the exact user-selected spelling and case' }
 }
 
 function Get-SpyAndroidTools {
@@ -80,7 +81,29 @@ function Get-SpyAndroidApkIdentity([string]$Path, $Tools) {
         certificateSha256=$certificates[0].Groups[1].Value.ToLowerInvariant()
         architectures=@($abis | ForEach-Object { $_.Groups[1].Value })
         signatureVerified=$true;sha256=(Get-SpyHash $Path);buildTools=$Tools.root
+        debuggable=($badging -match '(?m)^application-debuggable\s*$')
     }
+}
+
+function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance) {
+    switch ($Platform) {
+        'Android' {
+            @{mode=$(if ($Acceptance) { 'debug' } else { 'release' });applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { 'PiliPlus SPY debug' } else { $Release.androidDisplayName })}
+        }
+        'iOS' {
+            @{mode='release';applicationId=$(if ($Acceptance) { $Release.iosDevelopmentBundleId } else { $Release.iosBundleId })}
+        }
+        'Windows' { @{mode='release';applicationId=$Release.applicationId} }
+        default { throw 'Unsupported package platform' }
+    }
+}
+
+function Get-SpyIosAcceptanceProject([string]$Project, $Release) {
+    if ($Release.iosDevelopmentBundleId -cne 'com.spy.piliPlus.dev') { throw 'Acceptance IPA must use the exact user-selected Bundle ID' }
+    $formal = "PRODUCT_BUNDLE_IDENTIFIER = $($Release.iosBundleId);"
+    $development = "PRODUCT_BUNDLE_IDENTIFIER = $($Release.iosDevelopmentBundleId);"
+    if ([regex]::Matches($Project,[regex]::Escape($formal)).Count -ne 2 -or [regex]::Matches($Project,[regex]::Escape($development)).Count -ne 1) { throw 'Unexpected iOS project identities before acceptance preparation' }
+    $Project.Replace($formal,$development).Replace('APP_DISPLAY_NAME = PiliPlus;','APP_DISPLAY_NAME = "PiliPlus SPY Dev";')
 }
 
 function Get-SpyContext([string]$SourceRoot, [string]$CacheRoot) {
@@ -179,13 +202,16 @@ function Prepare-SpyDependencies($Context, [string]$Platform) {
         $original = ([uri]$package[0].rootUri).LocalPath
         $version = [regex]::Match([IO.File]::ReadAllText((Join-Path $original 'pubspec.yaml')),'(?m)^version:\s*(\S+)').Groups[1].Value
         if (-not $version) { throw 'Resolved UI package has no version' }
-        $destination = Join-Path $Context.cache "spy/dependencies/$Platform/$name-$version"
-        $stamp = Join-Path $destination 'spy-patches.json'
         $patchNames = if ($name -eq 'cupertino_ui') { @('lib/scripts/cupertino/bottom_sheet_ios_flutter.patch') } else {
             @('modal_barrier_material','navigation_drawer','popup_menu','fab','text_field','scaffold','refresh_indicator','tabs') | ForEach-Object { "lib/scripts/material/$_.patch" }
             if ($Platform -eq 'Android') { 'lib/scripts/material/bottom_sheet_android.patch' }
             if ($Platform -eq 'iOS') { 'lib/scripts/material/bottom_sheet_ios_flutter_material.patch' }
+            'lib/scripts/material/advanced_materials.patch'
         }
+        $patchIdentity = ($patchNames | ForEach-Object { "${_}:$(Get-SpyHash (Join-Path $Context.source $_))" }) -join "`n"
+        $patchSet = (Get-SpyTextHash $patchIdentity).Substring(0,12)
+        $destination = Join-Path $Context.cache "spy/dependencies/$Platform/$name-$version-$patchSet"
+        $stamp = Join-Path $destination 'spy-patches.json'
         if (-not (Test-Path -LiteralPath $stamp)) {
             if (Test-Path -LiteralPath $destination) { throw "Partial package copy: $destination" }
             New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
@@ -302,14 +328,15 @@ function Prepare-SpyAndroidNativeLibraries($Context) {
     $reports
 }
 
-function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk) {
+function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [switch]$DebugBuild) {
     $engine = Get-SpyGit $Sdk.root @('show',"$($Sdk.commit):bin/internal/engine.version")
     if ($engine -notmatch '^[0-9a-f]{40}$' -or [IO.File]::ReadAllText((Join-Path $Sdk.root 'bin/internal/engine.version')).Trim() -cne $engine) { throw 'Flutter engine revision changed' }
     $version = "1.0.0-$engine"
     $root = Join-Path $Context.cache 'spy/flutter-maven'
     $reports = @()
     $curl = Join-Path (Split-Path -Parent (Split-Path -Parent (Get-Command git.exe).Source)) 'mingw64/bin/curl.exe'
-    foreach ($module in @('flutter_embedding_release','arm64_v8a_release')) {
+    $mode = if ($DebugBuild) { 'debug' } else { 'release' }
+    foreach ($module in @("flutter_embedding_$mode","arm64_v8a_$mode")) {
         foreach ($extension in @('pom','jar')) {
             $relative = "io/flutter/$module/$version/$module-$version.$extension"
             $path = Join-Path $root $relative

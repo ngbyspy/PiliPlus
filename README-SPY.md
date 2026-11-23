@@ -80,3 +80,14 @@ arm64 IPA。没有 Apple 证书也可以完成构建，安装由用户自行签�
 
 上游仓库：<https://github.com/bggRGjQaUbCoE/PiliPlus>。
 本 fork 的发行不依赖上游是否接受放映厅 PR。
+
+
+## 第一批主题与分享验收
+
+开发分支 `spy/dev` 的本批范围为 S01、S02、T01、T02、T03、T05。分享文案来自 MXWF0 的 PR #3664；柔和配色、材质和圆角来自 PR #3666；滚动工具栏接入从 PR #3665 提取并新增独立开关。没有接入 T04 图标、商城、页面转场、封面转场或其他合集功能。
+
+在「设置 → 外观设置 → 应用主题」中比较「柔和动态色」「高级材质」「工具栏随滚动渐变」。三个开关默认关闭，工具栏渐变仅在高级材质开启时生效。圆角在本批固定采用连续曲率样式。先固定主题色和明暗模式，再逐个打开开关，检查首页、搜索结果、弹窗和菜单；同时留意滚动时文字可读性、顶栏收起和侧边栏模式。
+
+使用 `tool/spy/build.ps1 -Platform Windows/Android/iOS -AcceptanceBuild -OutputRoot <测试包输出目录>` 从干净的 `spy/dev` 打包。Windows 使用上游兼容的 Release 程序和原数据目录，允许原地测试；Android 必须是可与正式版并存的 `com.ngbyspy.piliplus.spy.debug` Debug APK，使用 debug 签名；iOS 使用 Release 模式构建可自签 IPA，但临时把所有 Runner 配置切换为 `com.spy.piliPlus.dev` 并核验实际产物，源项目正式 ID 仍为 `com.spy.piliPlus`。
+
+各平台与各功能分别记录人工验收。自动化测试和打包成功不代表用户测试通过。S01、S02 按用户决定免专项人工验收，随功能包回归。提交 iOS 云编译后停止监控，等待用户报告结果。

@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/scroll_under_toolbar.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
@@ -66,6 +67,11 @@ class _HotPageState extends State<HotPage>
         physics: const AlwaysScrollableScrollPhysics(),
         controller: controller.scrollController,
         slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: ToolbarScrollInset.of(context)?.extent ?? 0,
+            ),
+          ),
           if (Pref.showHotRcmd)
             SliverToBoxAdapter(
               child: Padding(

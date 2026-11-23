@@ -1,7 +1,9 @@
+import 'package:PiliPlus/common/widgets/advanced_materials.dart';
+import 'package:PiliPlus/common/widgets/scroll_under_toolbar.dart';
+import 'package:PiliPlus/models/common/home_tab_type.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/custom_height_widget.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
 import 'package:PiliPlus/pages/common/common_page.dart';
 import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
@@ -64,35 +66,56 @@ class _HomePageState extends CommonPageState<HomePage>
           ),
         ),
       );
-      if (_homeController.hideTopBar &&
-          _mainController.barHideType == .instant) {
-        tabBar = Material(
-          color: _colorScheme.surface,
-          child: tabBar,
-        );
-      }
     } else {
       tabBar = const SizedBox(height: 6);
     }
-    return Column(
-      children: [
-        if (!_mainController.useSideBar && MediaQuery.isPortraitOf(context))
-          customAppBar(),
-        tabBar,
-        Expanded(
-          child: onBuild(
-            tabBarView(
-              controller: _homeController.tabController,
-              children: _homeController.tabs.map((e) => e.page).toList(),
-            ),
-          ),
+    final tabs = _homeController.tabs;
+    final pages = tabs.map((e) => e.page).toList();
+    final underlaps = {
+      for (final (index, tab) in tabs.indexed)
+        if (tab == HomeTabType.rcmd ||
+            tab == HomeTabType.hot ||
+            tab == HomeTabType.bangumi ||
+            tab == HomeTabType.cinema)
+          index,
+    };
+    final leadingSpaces = {
+      for (final (index, tab) in tabs.indexed)
+        if (tab == HomeTabType.rcmd) index: Style.cardSpace,
+    };
+    final tabExtent = tabs.length > 1 ? 46.0 : 6.0;
+    final tint = AdvancedMaterials.tint(_colorScheme);
+    final dark = _colorScheme.brightness == Brightness.dark;
+    Widget layout(double barHeight, Widget? bar) => onBuild(
+      ScrollUnderToolbar(
+        extent: barHeight + tabExtent,
+        controller: _homeController.tabController,
+        pages: pages,
+        underlaps: underlaps,
+        leadingSpaces: leadingSpaces,
+        backdropGradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0, 0.55, 1],
+          colors: [
+            _colorScheme.surface,
+            tint.withValues(alpha: dark ? .77 : .82),
+            tint.withValues(alpha: dark ? .56 : .62),
+          ],
         ),
-      ],
+        toolbar: Column(
+          children: [?bar, tabBar],
+        ),
+      ),
     );
+    if (_mainController.useSideBar || !MediaQuery.isPortraitOf(context)) {
+      return layout(0, null);
+    }
+    return _buildTopBar(layout);
   }
 
-  Widget customAppBar() {
-    const padding = EdgeInsets.fromLTRB(14, 6, 14, 0);
+  Widget _buildTopBar(Widget Function(double height, Widget bar) layout) {
+    const padding = EdgeInsets.fromLTRB(14, 4, 14, 0);
     final child = Row(
       children: [
         searchBar(),
@@ -107,12 +130,21 @@ class _HomePageState extends CommonPageState<HomePage>
         return Obx(
           () {
             final offset = barOffset.value;
-            return CustomHeightWidget(
-              offset: Offset(0, -offset),
-              height: Style.topBarHeight - offset,
-              child: Padding(
-                padding: padding,
-                child: child,
+            final height = Style.topBarHeight - offset;
+            return layout(
+              height,
+              IgnorePointer(
+                ignoring: offset > 0,
+                child: ExcludeSemantics(
+                  excluding: offset > 0,
+                  child: ClipRect(
+                    child: CustomHeightWidget(
+                      offset: Offset(0, -offset),
+                      height: height,
+                      child: Padding(padding: padding, child: child),
+                    ),
+                  ),
+                ),
               ),
             );
           },
@@ -121,24 +153,39 @@ class _HomePageState extends CommonPageState<HomePage>
       if (_homeController.showTopBar case final showTopBar?) {
         return Obx(() {
           final showSearchBar = showTopBar.value;
-          return AnimatedOpacity(
-            opacity: showSearchBar ? 1 : 0,
-            duration: const Duration(milliseconds: 300),
-            child: AnimatedContainer(
-              curve: Curves.easeInOutCubicEmphasized,
-              duration: const Duration(milliseconds: 500),
-              height: showSearchBar ? Style.topBarHeight : 0,
-              padding: padding,
-              child: child,
-            ),
+          return TweenAnimationBuilder<double>(
+            tween: Tween(end: showSearchBar ? 1.0 : 0.0),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubicEmphasized,
+            child: Padding(padding: padding, child: child),
+            builder: (context, progress, child) {
+              final height = progress * Style.topBarHeight;
+              return layout(
+                height,
+                IgnorePointer(
+                  ignoring: !showSearchBar,
+                  child: ExcludeSemantics(
+                    excluding: !showSearchBar,
+                    child: Opacity(
+                      opacity: progress,
+                      child: SizedBox(height: height, child: child),
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         });
       }
     }
-    return Container(
-      height: Style.topBarHeight,
-      padding: padding,
-      child: child,
+    return layout(
+      Style.topBarHeight,
+      SizedBox(
+        height: Style.topBarHeight,
+        child: Padding(padding: padding, child: child),
+      ),
     );
   }
 

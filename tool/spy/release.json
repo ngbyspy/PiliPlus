@@ -23,7 +23,7 @@
   },
   "iosBuildNumber": "5655",
   "iosBundleId": "com.spy.piliPlus",
-  "iosDevelopmentBundleId": "com.spy.piliplus.dev",
+  "iosDevelopmentBundleId": "com.spy.piliPlus.dev",
   "applicationId": "com.example.piliplus",
   "windowsExecutable": "piliplus.exe"
 }

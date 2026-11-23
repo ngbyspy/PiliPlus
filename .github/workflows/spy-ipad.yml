@@ -56,6 +56,9 @@ jobs:
       - name: Check compatible release version policy
         shell: pwsh
         run: ./tool/spy/tests/test_release_policy.ps1
+      - name: Check isolated acceptance profiles
+        shell: pwsh
+        run: ./tool/spy/tests/test_acceptance_profiles.ps1
       - name: Validate and build device IPA
         shell: pwsh
         run: |

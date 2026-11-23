@@ -528,7 +528,7 @@
 					"@executable_path/Frameworks",
 				);
 				APP_DISPLAY_NAME = "PiliPlus 测试";
-				PRODUCT_BUNDLE_IDENTIFIER = com.spy.piliplus.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spy.piliPlus.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";

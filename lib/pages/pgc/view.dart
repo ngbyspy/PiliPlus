@@ -1,3 +1,5 @@
+import 'package:PiliPlus/common/widgets/scroll_under_toolbar.dart';
+
 import 'dart:math';
 
 import 'package:PiliPlus/common/style.dart';
@@ -62,6 +64,11 @@ class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
         controller: controller.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: ToolbarScrollInset.of(context)?.extent ?? 0,
+            ),
+          ),
           _buildFollow(theme),
           if (controller.showPgcTimeline)
             SliverToBoxAdapter(

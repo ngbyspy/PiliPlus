@@ -12,11 +12,12 @@ param(
 . (Join-Path $PSScriptRoot 'support.ps1')
 if ($Platform -eq 'iOS' -and -not $IsMacOS) { throw 'Build iPad IPA on a GitHub macOS runner' }
 $context = Get-SpyContext $SourceRoot $CacheRoot
-if ($AcceptanceBuild -and ($ValidateOnly -or $Platform -ne 'iOS' -or $context.branch -ne 'spy/dev' -or -not $OutputRoot)) { throw 'Acceptance packages require iOS, spy/dev and an explicit OutputRoot' }
+if ($AcceptanceBuild -and ($ValidateOnly -or $context.branch -ne 'spy/dev' -or -not $OutputRoot)) { throw 'Acceptance packages require spy/dev and an explicit OutputRoot' }
 if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
-if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
+if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
+$packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild)
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
 if ($AcceptanceBuild) {
@@ -32,8 +33,9 @@ $reportPath = Join-Path $OutputRoot ("build-$($Platform.ToLowerInvariant()).json
 $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.commit;sourceDirty=[bool]$status;upstreamCommit=$context.release.upstreamCommit;release=$context.release;startedOn=[DateTimeOffset]::UtcNow.ToString('o');nativeAcceptance='upstream-compatible identity restored; overwrite/data-retention acceptance pending';networkRecovery='deferred by user'}
 $report.sourceBranch = $context.branch
 $report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
+$report.packageProfile = $packageProfile
 if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }
-if ($Platform -eq 'Android') { $report.nativeAcceptance = 'installation over the preceding SPY package and mixed-playback acceptance pending' }
+if ($Platform -eq 'Android' -and -not $AcceptanceBuild) { $report.nativeAcceptance = 'installation over the preceding SPY package and mixed-playback acceptance pending' }
 if ($ProxyUrl) {
     $proxy = [uri]$ProxyUrl
     if ($proxy.Scheme -ne 'http' -or $proxy.UserInfo) { throw 'Use an HTTP proxy without credentials' }
@@ -42,9 +44,12 @@ if ($ProxyUrl) {
     $env:JAVA_TOOL_OPTIONS="-Dhttp.proxyHost=$($proxy.Host) -Dhttp.proxyPort=$($proxy.Port) -Dhttps.proxyHost=$($proxy.Host) -Dhttps.proxyPort=$($proxy.Port) -Dhttp.nonProxyHosts=localhost|*.aliyun.com -Dhttps.nonProxyHosts=localhost|*.aliyun.com"
 }
 $originalLock = [IO.File]::ReadAllBytes((Join-Path $context.source 'pubspec.lock'))
+$originalIosProject = $null
 try {
     if ($Platform -eq 'Android' -and -not $ValidateOnly) {
         $androidTools = Get-SpyAndroidTools
+    }
+    if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild) {
         $baseline = $context.release.androidUpdateFrom
         $baselinePath = Join-Path (Join-Path (Split-Path -Parent $context.source) 'Releases') $baseline.file
         $previousApk = Get-SpyAndroidApkIdentity $baselinePath $androidTools
@@ -55,7 +60,15 @@ try {
     }
     $sdk = Prepare-SpySdk $context $Platform $SdkRoot
     $report.sdk = $sdk
-    if ($Platform -eq 'iOS') { $report.nativeSourcePatches = Prepare-SpyIosSource $context }
+    if ($Platform -eq 'iOS') {
+        $report.nativeSourcePatches = Prepare-SpyIosSource $context
+        if ($AcceptanceBuild) {
+            $iosProjectPath = Join-Path $context.source 'ios/Runner.xcodeproj/project.pbxproj'
+            $originalIosProject = [IO.File]::ReadAllBytes($iosProjectPath)
+            $project = Get-SpyIosAcceptanceProject ([IO.File]::ReadAllText($iosProjectPath)) $context.release
+            [IO.File]::WriteAllText($iosProjectPath,$project,[Text.UTF8Encoding]::new($false))
+        }
+    }
     $lock = Join-Path $context.source $(if ($Platform -eq 'iOS') { 'tool/spy/dependencies/ios.lock' } else { 'tool/spy/dependencies/base.lock' })
     Copy-Item -LiteralPath $lock -Destination (Join-Path $context.source 'pubspec.lock') -Force
     Set-SpyDependencyOverrides $context
@@ -68,13 +81,14 @@ try {
     $report.resolvedLockSha256 = Get-SpyHash (Join-Path $context.source 'pubspec.lock')
     $paths = @('lib/features/watchroom','test/watchroom','test/release_identity_test.dart','lib/utils/runtime_identity.dart','lib/common/constants.dart','lib/main.dart','lib/utils/cache_manager.dart','lib/utils/desktop/window_controller.dart','lib/pages/mine/view.dart','lib/utils/app_scheme.dart','lib/pages/video/controller.dart','lib/pages/video/view.dart','lib/pages/video/introduction/pgc/view.dart','lib/pages/video/introduction/pgc/controller.dart','lib/models_new/pgc/pgc_info_model/result.dart','lib/plugin/pl_player/controller.dart','lib/pages/video/widgets/header_control.dart','lib/pages/video/widgets/player_focus.dart','lib/pages/history/view.dart','lib/pages/history/widgets/item.dart')
     $paths += @('lib/services/audio_session.dart','lib/services/playback_audio_session.dart','lib/services/mobile_playback_volume.dart','lib/services/service_locator.dart','lib/models/common/audio_normalization.dart','lib/pages/audio/controller.dart','lib/pages/audio/view.dart','lib/pages/live_room/widgets/header_control.dart','lib/pages/setting/models/model.dart','lib/pages/setting/models/play_settings.dart','lib/pages/setting/view.dart','lib/pages/setting/widgets/mixed_playback_volume_dialog.dart','lib/utils/player_volume.dart','lib/utils/storage.dart','lib/utils/storage_pref.dart','lib/plugin/pl_player/view/view.dart','test/services','test/pages/setting')
+    $paths += @('lib/common/widgets/advanced_materials.dart','lib/common/widgets/g2_shape_border.dart','lib/common/widgets/floating_navigation_bar.dart','lib/common/widgets/scroll_under_toolbar.dart','lib/common/widgets/sliver/sliver_floating_header.dart','lib/common/widgets/refresh_layout.dart','lib/common/widgets/flutter/refresh_indicator.dart','lib/pages/home/view.dart','lib/pages/hot/view.dart','lib/pages/pgc/view.dart','lib/pages/rcmd/view.dart','lib/pages/search_panel/view.dart','lib/pages/search_panel/video/view.dart','lib/pages/search_result/view.dart','lib/pages/setting/pages/color_select.dart','lib/utils/soft_dynamic_colors.dart','lib/utils/theme_utils.dart','lib/utils/extension/core_palettes_ext.dart','lib/utils/share_utils.dart','test/utils')
     Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + $paths) $context.source
-    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/services','test/pages/setting','test/release_identity_test.dart') $context.source
+    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/services','test/pages/setting','test/utils/dynamic_share_test.dart','test/utils/soft_dynamic_colors_test.dart','test/utils/advanced_materials_test.dart','test/release_identity_test.dart') $context.source
     $report.validation = @{analysis=$true;tests=$true}
     if ($ValidateOnly) { $report.configuration='validation-only'; Write-SpyJson $report $reportPath; return }
     $defines = Join-Path $context.source '.spy-build/release-defines.json'
     Write-SpyJson @{'pili.name'=$context.release.displayVersion;'pili.code'=$context.release.androidVersionCode;'pili.hash'=$context.commit;'pili.time'=[DateTimeOffset]::Now.ToUnixTimeSeconds()} $defines
-    $common = @('--release','--no-pub',"--build-name=$($context.release.version)","--dart-define-from-file=$defines")
+    $common = @("--$($packageProfile.mode)",'--no-pub',"--build-name=$($context.release.version)","--dart-define-from-file=$defines")
     switch ($Platform) {
         'Windows' {
             $tools = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'config/windows-tools.json') -Raw | ConvertFrom-Json
@@ -90,14 +104,15 @@ try {
             if ($nativeIdentity.CompanyName -cne 'com.example' -or $nativeIdentity.ProductName -cne 'piliplus' -or $nativeIdentity.OriginalFilename -cne 'piliplus.exe') { throw 'Windows metadata would open a different upstream data directory' }
             if ($nativeIdentity.ProductVersion -cne "$($context.release.version)+$($context.release.androidVersionCode)") { throw 'Windows native build version differs from the upstream baseline' }
             $report.windowsProfile = @{company=$nativeIdentity.CompanyName;product=$nativeIdentity.ProductName;supportDirectory='%APPDATA%/com.example/piliplus';developmentSubdirectory='spy-dev'}
-            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$($context.release.displayVersion)-windows-x64-portable.zip"
+            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$packageBuildId-windows-x64-portable.zip"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }
             $files = @(Get-ChildItem -LiteralPath $bundle | Where-Object { $_.Extension -ne '.exe' -or $_.Name -ceq $context.release.windowsExecutable } | ForEach-Object FullName)
             Compress-Archive -LiteralPath $files -DestinationPath $artifact
         }
         'Android' {
             $report.nativeLibraries = @(Prepare-SpyAndroidNativeLibraries $context)
-            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk)
+            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk -DebugBuild:$AcceptanceBuild)
+            if (-not $AcceptanceBuild) {
             $secrets = Join-Path (Split-Path -Parent $context.source) '.secrets'
             $identity = Get-Content -LiteralPath (Join-Path $secrets 'android-signing.json') -Raw | ConvertFrom-Json
             $key = Join-Path $secrets $identity.storeFile
@@ -109,14 +124,20 @@ try {
             $properties = Join-Path $secrets 'android-key.properties'
             [IO.File]::WriteAllText($properties,"storeFile=$($key.Replace('\','/'))`nstorePassword=$($identity.password)`nkeyAlias=$($identity.keyAlias)`nkeyPassword=$($identity.password)`n",[Text.UTF8Encoding]::new($false))
             $env:PILIPLUS_SPY_KEY_PROPERTIES=$properties
+            }
             $env:GRADLE_USER_HOME=Join-Path $context.cache 'gradle'
             New-Item -ItemType Directory -Path (Join-Path $env:GRADLE_USER_HOME 'init.d') -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
             Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
-            $builtApk = Join-Path $context.source 'build/app/outputs/flutter-apk/app-release.apk'
+            $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
-            if ($apkIdentity.applicationId -cne $context.release.androidApplicationId -or $apkIdentity.certificateSha256 -cne $previousApk.certificateSha256 -or $apkIdentity.versionCode -ne $context.release.androidPackageVersionCode -or $apkIdentity.versionCode -le $previousApk.versionCode -or $apkIdentity.displayName -cne $context.release.androidDisplayName) { throw 'Built APK cannot update the preceding SPY package with the requested identity' }
-            $apkIdentity['updatesPreviousSpy'] = $true
+            if ($AcceptanceBuild) {
+                if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or -not $apkIdentity.debuggable -or $apkIdentity.displayName -cne $packageProfile.displayName) { throw 'Acceptance APK must be a separately installed, debuggable SPY application' }
+                $apkIdentity['updatesPreviousSpy'] = $false
+            } else {
+                if ($apkIdentity.applicationId -cne $context.release.androidApplicationId -or $apkIdentity.certificateSha256 -cne $previousApk.certificateSha256 -or $apkIdentity.versionCode -ne $context.release.androidPackageVersionCode -or $apkIdentity.versionCode -le $previousApk.versionCode -or $apkIdentity.displayName -cne $context.release.androidDisplayName -or $apkIdentity.debuggable) { throw 'Built APK cannot update the preceding SPY package with the requested identity' }
+                $apkIdentity['updatesPreviousSpy'] = $true
+            }
             $report.androidVerification = $apkIdentity
             $archive = [IO.Compression.ZipFile]::OpenRead($builtApk)
             try {
@@ -124,17 +145,17 @@ try {
                 if ($abis.Count -ne 1 -or $abis[0] -cne 'arm64-v8a') { throw 'Release APK advertises unsupported native architectures' }
                 $report.architectures = $abis
             } finally { $archive.Dispose() }
-            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$($context.release.displayVersion)-android-arm64.apk"
+            $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$packageBuildId-android-arm64-$($packageProfile.mode).apk"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }
             Copy-Item -LiteralPath $builtApk -Destination $artifact
-            $report.signingKeystoreSha256=$identity.keystoreSha256
+            if (-not $AcceptanceBuild) { $report.signingKeystoreSha256=$identity.keystoreSha256 }
         }
         'iOS' {
             Invoke-SpyNative $sdk.executable (@('build','ios','--no-codesign') + $common + @('--build-number',"$($context.release.iosBuildNumber)")) $context.source
             $directory = Join-Path $OutputRoot 'ipad'
-            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$packageBuildId,'--expected-bundle-id',$context.release.iosBundleId)
+            Invoke-SpyNative python3 @((Join-Path $PSScriptRoot 'package-ios.py'),'--app',(Join-Path $context.source 'build/ios/iphoneos/Runner.app'),'--output',$directory,'--build-id',$packageBuildId,'--expected-bundle-id',$packageProfile.applicationId)
             $native = Get-Content -LiteralPath (Join-Path $directory 'ipa-verification.json') -Raw | ConvertFrom-Json
-            if ($native.bundleIdentifier -cne $context.release.iosBundleId -or $native.version -cne $context.release.version -or $native.buildNumber -cne $context.release.iosBuildNumber) { throw 'IPA identity/build version differs from the configured iOS release' }
+            if ($native.bundleIdentifier -cne $packageProfile.applicationId -or $native.version -cne $context.release.version -or $native.buildNumber -cne $context.release.iosBuildNumber) { throw 'IPA identity/build version differs from the selected package profile' }
             $artifact=$native.ipa;$report.ipaVerification=$native
         }
     }
@@ -146,6 +167,7 @@ try {
 } catch { $report.failure=$_.Exception.Message; Write-SpyJson $report $reportPath; throw }
 finally {
     [IO.File]::WriteAllBytes((Join-Path $context.source 'pubspec.lock'),$originalLock)
+    if ($null -ne $originalIosProject) { [IO.File]::WriteAllBytes($iosProjectPath,$originalIosProject) }
     $env:PILIPLUS_SPY_KEY_PROPERTIES=$null
     $env:PILIPLUS_SPY_FLUTTER_MAVEN=$null
 }

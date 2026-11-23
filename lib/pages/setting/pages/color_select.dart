@@ -15,6 +15,7 @@ import 'package:PiliPlus/pages/mine/controller.dart';
 import 'package:PiliPlus/pages/setting/slide_color_picker.dart';
 import 'package:PiliPlus/pages/setting/widgets/popup_item.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
+import 'package:PiliPlus/pages/setting/widgets/switch_item.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/storage.dart';
@@ -151,6 +152,27 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                 onTap: _onChanged,
               ),
             ),
+          SetSwitchItem(
+            title: '柔和动态色',
+            subtitle: '降低主题强调色饱和度，保持原亮度',
+            leading: const Icon(Icons.tonality),
+            setKey: SettingBoxKey.softDynamicColors,
+            onChanged: (_) => Get.updateMyAppTheme(),
+          ),
+          SetSwitchItem(
+            title: '高级材质',
+            subtitle: '浮层背景模糊与半透明主题色',
+            leading: const Icon(Icons.blur_on),
+            setKey: SettingBoxKey.advancedMaterials,
+            onChanged: (_) => Get.updateMyAppTheme(),
+          ),
+          SetSwitchItem(
+            title: '工具栏随滚动渐变',
+            subtitle: '需开启高级材质；首页和搜索结果的顶部栏随滚动变为毛玻璃',
+            leading: const Icon(Icons.gradient),
+            setKey: SettingBoxKey.toolbarScrollMaterials,
+            onChanged: (_) => Get.updateMyAppTheme(),
+          ),
           Padding(
             padding: padding + const .all(12),
             child: Obx(_buildColorPanel),

@@ -1096,6 +1096,9 @@ abstract final class Pref {
   static bool get floatingNavBar =>
       _setting.get(SettingBoxKey.floatingNavBar, defaultValue: false);
 
+  static bool get iosLiquidGlassNavigation =>
+      _setting.get(SettingBoxKey.iosLiquidGlassNavigation, defaultValue: false);
+
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
 

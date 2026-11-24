@@ -147,6 +147,19 @@ List<SettingsModel> get styleSettings => [
     defaultVal: false,
     needReboot: true,
   ),
+  if (Platform.isIOS)
+    SwitchModel(
+      title: '液态玻璃底栏',
+      subtitle: 'iOS / iPadOS 26 及以上：按住底栏滑动选择栏目；使用底栏布局时生效',
+      leading: const Icon(Icons.blur_on),
+      setKey: SettingBoxKey.iosLiquidGlassNavigation,
+      defaultVal: false,
+      onChanged: (value) {
+        if (Get.isRegistered<MainController>()) {
+          Get.find<MainController>().iosLiquidGlassNavigation.value = value;
+        }
+      },
+    ),
   SwitchModel(
     title: '显示粉丝勋章',
     leading: const Icon(MdiIcons.medalOutline),

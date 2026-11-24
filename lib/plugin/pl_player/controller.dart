@@ -913,7 +913,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     return player;
   }
 
-  late final buffer = Pref.initBuffer(_playbackSpeed.value);
+  Map<String, String> get buffer => Pref.initBuffer(lastPlaybackSpeed);
   late final liveBuffer = Pref.initLiveBuffer();
 
   // 配置播放器
@@ -1246,6 +1246,22 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (request != _speedRequest || player != videoPlayerController) return;
     await player?.setRate(speed);
     if (request != _speedRequest || player != videoPlayerController) return;
+    if (player != null && !isLive && !isFileSource) {
+      final options = Pref.initBuffer(speed);
+      try {
+        // Scale seconds with rate; keep byte limits and live/local cache intact.
+        for (final name in ['cache-secs', 'demuxer-hysteresis-secs']) {
+          await player.command(['set', name, options[name]!]);
+          if (request != _speedRequest || player != videoPlayerController) {
+            return;
+          }
+        }
+      } catch (error) {
+        // A cache-option failure must not prevent ordinary speed control.
+        if (kDebugMode) debugPrint('Playback buffer update failed: $error');
+      }
+      if (request != _speedRequest || player != videoPlayerController) return;
+    }
     if (!isLive) _playbackSpeed.value = speed;
     _updatePlaybackState();
     if (danmakuController != null) {

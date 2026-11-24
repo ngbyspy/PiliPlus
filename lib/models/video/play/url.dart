@@ -78,6 +78,17 @@ class PlayUrlModel {
     return best;
   }
 
+  /// Supplementing lower tiers cannot improve a preference at/above the highest
+  /// returned stream. Lower preferences must wait to avoid starting too high.
+  bool canStartBeforeQualitySupplement(int? preferredQuality) {
+    final videos = dash?.video;
+    if (preferredQuality == null || videos == null || videos.isEmpty) {
+      return false;
+    }
+    final highest = videos.fold<int>(0, (value, video) => max(value, video.id));
+    return preferredQuality >= highest;
+  }
+
   PlayUrlModel.fromJson(Map<String, dynamic> json) {
     from = json['from'];
     result = json['result'];

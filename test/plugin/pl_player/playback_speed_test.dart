@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
+import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:flutter/services.dart';
@@ -14,9 +15,19 @@ class _Player extends Fake implements Player {
   @override
   final state = PlayerState();
   final rates = <double>[];
+  final commands = <List<String>>[];
+  Future<void>? commandGate;
+  bool failCommand = false;
   Future<void>? gate;
   bool failNext = false;
   Future<void> _pending = Future.value();
+
+  @override
+  Future<void> command(List<String> args) async {
+    commands.add(List.of(args));
+    await commandGate;
+    if (failCommand) throw StateError('cache option rejected');
+  }
 
   @override
   Future<void> setRate(double rate, {bool synchronized = true}) {
@@ -36,6 +47,10 @@ class _Controller extends PlPlayerController {
   _Controller(this.player) : super.forTesting() {
     playerStatus = PlayerStatus.playing;
     enableAutoLongPressSpeed = false;
+    dataSource = NetworkSource(
+      videoSource: 'https://example.test/video',
+      audioSource: null,
+    );
   }
   @override
   double get longPressSpeed => 3;
@@ -70,7 +85,7 @@ void main() {
   });
 
   test(
-    'hold restores the chosen rate without changing cache or preferences',
+    'hold restores the chosen rate and buffer without changing preferences',
     () async {
       await controller.setPlaybackSpeed(1.5);
       await controller.setLongPressStatus(true);
@@ -157,5 +172,71 @@ void main() {
     await controller.setLongPressStatus(true);
     await controller.setLongPressStatus(false);
     expect(player.state.rate, 1.5);
+  });
+
+  test(
+    'prefetch seconds follow rate and restore while byte budgets stay fixed',
+    () async {
+      await GStorage.setting.put(SettingBoxKey.bufferSec, 16.0);
+      await GStorage.setting.put(SettingBoxKey.bufferSize, 32.0);
+      final bytes = controller.buffer['demuxer-max-bytes'];
+      await controller.setPlaybackSpeed(2);
+      expect(player.commands, [
+        ['set', 'cache-secs', '32.000'],
+        ['set', 'demuxer-hysteresis-secs', '21.333'],
+      ]);
+      expect(controller.buffer['cache-secs'], '32.000');
+      expect(controller.buffer['demuxer-max-bytes'], bytes);
+      expect(controller.buffer['demuxer-max-back-bytes'], bytes);
+      player.commands.clear();
+      await controller.setLongPressStatus(true);
+      expect(player.commands.first.last, '48.000');
+      await controller.setLongPressStatus(false);
+      expect(player.commands[player.commands.length - 2].last, '32.000');
+    },
+  );
+
+  test('live and local files do not receive network buffer updates', () async {
+    controller.isLive = true;
+    await controller.setPlaybackSpeed(2);
+    expect(player.commands, isEmpty);
+    controller
+      ..isLive = false
+      ..dataSource = FileSource(
+        dir: 'local',
+        isMp4: true,
+        hasDashAudio: false,
+        typeTag: '1',
+      );
+    await controller.setPlaybackSpeed(1.5);
+    expect(player.commands, isEmpty);
+    expect(player.state.rate, 1.5);
+  });
+
+  test(
+    'a blocked old buffer update cannot overwrite the latest speed',
+    () async {
+      final gate = Completer<void>();
+      player.commandGate = gate.future;
+      final old = controller.setPlaybackSpeed(3);
+      await Future<void>.delayed(Duration.zero);
+      final latest = controller.setPlaybackSpeed(1);
+      gate.complete();
+      await Future.wait([old, latest]);
+      expect(controller.playbackSpeed, 1);
+      expect(player.state.rate, 1);
+      expect(player.commands.last, [
+        'set',
+        'demuxer-hysteresis-secs',
+        '10.667',
+      ]);
+    },
+  );
+
+  test('rejected cache option does not break speed control', () async {
+    player.failCommand = true;
+    await controller.setPlaybackSpeed(2);
+    expect(controller.playbackSpeed, 2);
+    expect(player.state.rate, 2);
   });
 }

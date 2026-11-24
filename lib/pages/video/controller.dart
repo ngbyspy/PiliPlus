@@ -861,11 +861,14 @@ class VideoDetailController extends GetxController
   }
 
   Future<void> _supplementVideoQualities() async {
-    final quality = data.missingVideoQualityBelowHighest;
+    final target = data;
+    final targetCid = cid.value;
+    final quality = target.missingVideoQualityBelowHighest;
     if (quality == -1) return;
     final result = await _getVideoUrl(quality);
+    if (isClosed || !identical(data, target) || cid.value != targetCid) return;
     if (result case Success(:final response)) {
-      data.dash!.video!.merge(response.dash?.video);
+      target.dash!.video!.merge(response.dash?.video);
     }
   }
 
@@ -914,7 +917,12 @@ class VideoDetailController extends GetxController
 
     if (result case Success(:final response)) {
       data = response;
-      if (data.dash != null) await _supplementVideoQualities();
+      final deferQualitySupplement = data.canStartBeforeQualitySupplement(
+        plPlayerController.cacheVideoQa,
+      );
+      if (data.dash != null && !deferQualitySupplement) {
+        await _supplementVideoQualities();
+      }
 
       languages.value = data.language?.items;
       currLang.value = data.curLanguage;
@@ -1029,6 +1037,13 @@ class VideoDetailController extends GetxController
         audioUrl = '';
       }
       await initPlayerIfNeeded(autoFullScreenFlag);
+      if (deferQualitySupplement && !isClosed) {
+        try {
+          await _supplementVideoQualities();
+        } catch (_) {
+          // Supplemental quality metadata must not fail an already-started video.
+        }
+      }
     } else {
       _autoPlay.value = false;
       videoState.value = false;

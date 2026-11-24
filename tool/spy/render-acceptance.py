@@ -22,9 +22,11 @@ def render(root, date, ios_source=None, batch=1):
     cards = []
     for platform, description in [
         ("Windows", "完整解压后运行；沿用上游身份和原数据目录，可原地测试。"),
-        ("Android", "独立安装的 Debug APK，与 SPY 正式版及上游版并存。"),
+        ("Android", "独立安装的 dev APK，默认以 Release 模式编译，与正式版并存。"),
     ]:
         report = root / platform / f"build-{platform.lower()}.json"
+        if platform == "Android" and (root / "Android-release" / "build-android.json").exists():
+            report = root / "Android-release" / "build-android.json"
         asset = None
         if report.exists():
             data = json.loads(report.read_text(encoding="utf-8-sig"))
@@ -38,6 +40,8 @@ def render(root, date, ios_source=None, batch=1):
                 if platform == "Android":
                     asset["applicationId"] = data["androidVerification"]["applicationId"]
                     asset["debuggable"] = data["androidVerification"]["debuggable"]
+                    asset["buildMode"] = data.get("packageProfile", {}).get("mode", "debug" if asset["debuggable"] else "release")
+                    description = f'独立安装的 {asset["buildMode"].capitalize()} dev APK，与正式版及上游版并存。'
                 else:
                     asset["identity"] = data["windowsProfile"]
                 if asset["sha256"] in old_assets:
@@ -76,7 +80,7 @@ def render(root, date, ios_source=None, batch=1):
 <li>L01～L06：查看推荐、历史、收藏和搜索的加载、空列表、失败及重试提示；切换账号和快速更换查询后不应混入旧结果。失败和乱序场景另有自动化测试。</li>
 <li>L07：在视频详情滚动到简介或评论，从其他页面返回，检查位置是否保持。</li>
 <li>I02：导入时连续点击确定只提交一次；取消弹窗再进入其他页面，原导入完成不应关闭新页面。</li>
-</ol><p>请按平台反馈有问题的编号。Android 此处仍是独立 Debug 测试包；比较第一批整体性能请使用正式目录中的 Release 覆盖包。</p><p><a href="../batch-1/index.html">查看第一批验收记录</a></p></section>''' + page[end:]
+</ol><p>请按平台反馈有问题的编号。Android dev 默认也使用 Release 编译，独立包名保证与正式版并存；历史 Debug 包仍按各自构建报告标注。</p><p><a href="acceptance-guide.html">逐项验收说明</a> · <a href="../batch-1/index.html">第一批验收记录</a></p></section>''' + page[end:]
     elif previous.get("userAcceptance", "pending") != "pending":
         page = page.replace("功能仍待你逐项验收。", "Windows、iOS 已验收通过；Android 功能认可，整体卡顿等待正式 Release 覆盖包复验。")
     (root / "index.html").write_text(page.replace("__DATE__", html.escape(date)).replace("__CARDS__", "".join(cards)), encoding="utf-8")

@@ -6,6 +6,7 @@ param(
     [string]$OutputRoot,
     [string]$ProxyUrl,
     [switch]$AcceptanceBuild,
+    [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release',
     [switch]$ValidateOnly,
     [switch]$Offline
 )
@@ -17,7 +18,8 @@ if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
-$packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild)
+if ($AndroidBuildMode -ne 'release' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Debug/Profile are explicit Android acceptance diagnostics only' }
+$packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild) $AndroidBuildMode
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
 if ($AcceptanceBuild) {
@@ -112,7 +114,7 @@ try {
         }
         'Android' {
             $report.nativeLibraries = @(Prepare-SpyAndroidNativeLibraries $context)
-            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk -DebugBuild:$AcceptanceBuild)
+            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk -BuildMode $packageProfile.mode)
             if (-not $AcceptanceBuild) {
             $secrets = Join-Path (Split-Path -Parent $context.source) '.secrets'
             $identity = Get-Content -LiteralPath (Join-Path $secrets 'android-signing.json') -Raw | ConvertFrom-Json
@@ -129,11 +131,13 @@ try {
             $env:GRADLE_USER_HOME=Join-Path $context.cache 'gradle'
             New-Item -ItemType Directory -Path (Join-Path $env:GRADLE_USER_HOME 'init.d') -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
-            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
+            $androidArguments = @('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true')
+            if ($AcceptanceBuild) { $androidArguments += '--android-project-arg=spyAcceptance=true' }
+            Invoke-SpyNative $sdk.executable ($androidArguments + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
             $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
             if ($AcceptanceBuild) {
-                if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or -not $apkIdentity.debuggable -or $apkIdentity.displayName -cne $packageProfile.displayName) { throw 'Acceptance APK must be a separately installed, debuggable SPY application' }
+                if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or $apkIdentity.debuggable -ne ($packageProfile.mode -eq 'debug') -or $apkIdentity.displayName -cne $packageProfile.displayName -or $apkIdentity.certificateSha256 -ceq $context.release.androidCertificateSha256) { throw 'Acceptance APK identity, build mode or separate signing lineage is incorrect' }
                 $apkIdentity['updatesPreviousSpy'] = $false
             } else {
                 if ($apkIdentity.applicationId -cne $context.release.androidApplicationId -or $apkIdentity.certificateSha256 -cne $previousApk.certificateSha256 -or $apkIdentity.versionCode -ne $context.release.androidPackageVersionCode -or $apkIdentity.versionCode -le $previousApk.versionCode -or $apkIdentity.displayName -cne $context.release.androidDisplayName -or $apkIdentity.debuggable) { throw 'Built APK cannot update the preceding SPY package with the requested identity' }
@@ -145,6 +149,10 @@ try {
                 $abis = @($archive.Entries | Where-Object FullName -Like 'lib/*/*.so' | ForEach-Object { ($_.FullName -split '/')[1] } | Sort-Object -Unique)
                 if ($abis.Count -ne 1 -or $abis[0] -cne 'arm64-v8a') { throw 'Release APK advertises unsupported native architectures' }
                 $report.architectures = $abis
+                $hasKernel = $null -ne $archive.GetEntry('assets/flutter_assets/kernel_blob.bin')
+                $hasAot = $null -ne $archive.GetEntry('lib/arm64-v8a/libapp.so')
+                if (($packageProfile.mode -eq 'debug' -and -not $hasKernel) -or ($packageProfile.mode -ne 'debug' -and ($hasKernel -or -not $hasAot))) { throw 'APK payload does not match the selected Debug versus AOT build mode' }
+                $report.androidPayload = @{mode=$packageProfile.mode;hasDebugKernel=$hasKernel;hasAotApplication=$hasAot}
             } finally { $archive.Dispose() }
             $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$packageBuildId-android-arm64-$($packageProfile.mode).apk"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }

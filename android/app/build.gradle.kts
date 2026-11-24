@@ -19,6 +19,7 @@ if (!isBuiltInKotlinEnabled) {
 }
 
 val spyRelease = JsonSlurper().parse(file("../../tool/spy/release.json")) as Map<*, *>
+val spyAcceptance = project.findProperty("spyAcceptance")?.toString() == "true"
 
 android {
     namespace = "com.example.piliplus"
@@ -57,7 +58,7 @@ android {
         }
     }
 
-    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } && config == null) {
+    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } && config == null && !spyAcceptance) {
         error("SPY release signing key is missing. Build through tool/spy/build.ps1 with the preserved signing identity.")
     }
 
@@ -70,7 +71,7 @@ android {
 
     buildTypes {
         all {
-            signingConfig = config ?: signingConfigs["debug"]
+            signingConfig = if (spyAcceptance) signingConfigs["debug"] else config ?: signingConfigs["debug"]
         }
         release {
             // SPY currently distributes an ARM64 APK; native dependency JARs
@@ -78,7 +79,12 @@ android {
             ndk {
                 abiFilters += "arm64-v8a"
             }
-            if (project.hasProperty("dev")) {
+            if (spyAcceptance) {
+                // Keep the existing acceptance installation and key. The
+                // suffix identifies the app; it does not select Debug mode.
+                applicationIdSuffix = ".debug"
+                resValue("string", "app_name", "PiliPlus SPY dev")
+            } else if (project.hasProperty("dev")) {
                 applicationIdSuffix = ".dev"
                 resValue(
                     type = "string",
@@ -97,6 +103,16 @@ android {
             resValue("string", "app_name", "PiliPlus SPY debug")
             ndk {
                 abiFilters += "arm64-v8a"
+            }
+        }
+        if (spyAcceptance) {
+            maybeCreate("profile").apply {
+                initWith(getByName("release"))
+                signingConfig = signingConfigs["debug"]
+                applicationIdSuffix = ".debug"
+                isDebuggable = false
+                resValue("string", "app_name", "PiliPlus SPY dev")
+                matchingFallbacks += "release"
             }
         }
     }

@@ -85,10 +85,11 @@ function Get-SpyAndroidApkIdentity([string]$Path, $Tools) {
     }
 }
 
-function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance) {
+function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance, [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release') {
     switch ($Platform) {
         'Android' {
-            @{mode=$(if ($Acceptance) { 'debug' } else { 'release' });applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { 'PiliPlus SPY debug' } else { $Release.androidDisplayName })}
+            if (-not $Acceptance -and $AndroidBuildMode -ne 'release') { throw 'Formal Android packages require Release mode' }
+            @{mode=$AndroidBuildMode;applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { if ($AndroidBuildMode -eq 'debug') { 'PiliPlus SPY debug' } else { 'PiliPlus SPY dev' } } else { $Release.androidDisplayName })}
         }
         'iOS' {
             @{mode='release';applicationId=$(if ($Acceptance) { $Release.iosDevelopmentBundleId } else { $Release.iosBundleId });displayName=$(if ($Acceptance) { 'PiliPlus SPY Dev' } else { 'PiliPlus' })}
@@ -329,14 +330,14 @@ function Prepare-SpyAndroidNativeLibraries($Context) {
     $reports
 }
 
-function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [switch]$DebugBuild) {
+function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [ValidateSet('release','debug','profile')][string]$BuildMode = 'release') {
     $engine = Get-SpyGit $Sdk.root @('show',"$($Sdk.commit):bin/internal/engine.version")
     if ($engine -notmatch '^[0-9a-f]{40}$' -or [IO.File]::ReadAllText((Join-Path $Sdk.root 'bin/internal/engine.version')).Trim() -cne $engine) { throw 'Flutter engine revision changed' }
     $version = "1.0.0-$engine"
     $root = Join-Path $Context.cache 'spy/flutter-maven'
     $reports = @()
     $python = if ($IsWindows) { 'python' } else { 'python3' }
-    $mode = if ($DebugBuild) { 'debug' } else { 'release' }
+    $mode = $BuildMode
     foreach ($module in @("flutter_embedding_$mode","arm64_v8a_$mode")) {
         foreach ($extension in @('pom','jar')) {
             $relative = "io/flutter/$module/$version/$module-$version.$extension"

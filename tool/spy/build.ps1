@@ -7,6 +7,7 @@ param(
     [string]$ProxyUrl,
     [switch]$AcceptanceBuild,
     [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release',
+    [ValidateSet('skia','impeller')][string]$AndroidRenderer = 'skia',
     [switch]$ValidateOnly,
     [switch]$Offline
 )
@@ -19,6 +20,7 @@ $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
 if ($AndroidBuildMode -ne 'release' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Debug/Profile are explicit Android acceptance diagnostics only' }
+if ($AndroidRenderer -ne 'skia' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Impeller is an explicit Android acceptance experiment only' }
 $packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild) $AndroidBuildMode
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
@@ -36,6 +38,7 @@ $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.comm
 $report.sourceBranch = $context.branch
 $report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
 $report.packageProfile = $packageProfile
+if ($Platform -eq 'Android') { $report.androidRenderer = $AndroidRenderer }
 if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }
 if ($Platform -eq 'Android' -and -not $AcceptanceBuild) { $report.nativeAcceptance = 'installation over the preceding SPY package and mixed-playback acceptance pending' }
 if ($ProxyUrl) {
@@ -83,7 +86,7 @@ try {
     $report.resolvedLockSha256 = Get-SpyHash (Join-Path $context.source 'pubspec.lock')
     $paths = @('lib/features/watchroom','test/watchroom','test/release_identity_test.dart','lib/utils/runtime_identity.dart','lib/common/constants.dart','lib/main.dart','lib/utils/cache_manager.dart','lib/utils/desktop/window_controller.dart','lib/pages/mine/view.dart','lib/utils/app_scheme.dart','lib/pages/video/controller.dart','lib/pages/video/view.dart','lib/pages/video/introduction/pgc/view.dart','lib/pages/video/introduction/pgc/controller.dart','lib/models_new/pgc/pgc_info_model/result.dart','lib/plugin/pl_player/controller.dart','lib/pages/video/widgets/header_control.dart','lib/pages/video/widgets/player_focus.dart','lib/pages/history/view.dart','lib/pages/history/widgets/item.dart')
     $paths += @('lib/services/audio_session.dart','lib/services/playback_audio_session.dart','lib/services/mobile_playback_volume.dart','lib/services/service_locator.dart','lib/models/common/audio_normalization.dart','lib/pages/audio/controller.dart','lib/pages/audio/view.dart','lib/pages/live_room/widgets/header_control.dart','lib/pages/setting/models/model.dart','lib/pages/setting/models/play_settings.dart','lib/pages/setting/view.dart','lib/pages/setting/widgets/mixed_playback_volume_dialog.dart','lib/utils/player_volume.dart','lib/utils/storage.dart','lib/utils/storage_pref.dart','lib/plugin/pl_player/view/view.dart','test/services','test/pages/setting')
-    $paths += @('lib/common/widgets/advanced_materials.dart','lib/common/widgets/g2_shape_border.dart','lib/common/widgets/floating_navigation_bar.dart','lib/common/widgets/scroll_under_toolbar.dart','lib/common/widgets/sliver/sliver_floating_header.dart','lib/common/widgets/refresh_layout.dart','lib/common/widgets/flutter/refresh_indicator.dart','lib/pages/home/view.dart','lib/pages/hot/view.dart','lib/pages/pgc/view.dart','lib/pages/rcmd/view.dart','lib/pages/search_panel/view.dart','lib/pages/search_panel/video/view.dart','lib/pages/search_result/view.dart','lib/pages/setting/pages/color_select.dart','lib/utils/soft_dynamic_colors.dart','lib/utils/theme_utils.dart','lib/utils/extension/core_palettes_ext.dart','lib/utils/share_utils.dart','test/utils')
+    $paths += @('lib/common/widgets/android_liquid_glass_navigation.dart','lib/utils/android/glass_performance.dart','lib/common/widgets/advanced_materials.dart','lib/common/widgets/g2_shape_border.dart','lib/common/widgets/floating_navigation_bar.dart','lib/common/widgets/scroll_under_toolbar.dart','lib/common/widgets/sliver/sliver_floating_header.dart','lib/common/widgets/refresh_layout.dart','lib/common/widgets/flutter/refresh_indicator.dart','lib/pages/home/view.dart','lib/pages/hot/view.dart','lib/pages/pgc/view.dart','lib/pages/rcmd/view.dart','lib/pages/search_panel/view.dart','lib/pages/search_panel/video/view.dart','lib/pages/search_result/view.dart','lib/pages/setting/pages/color_select.dart','lib/utils/soft_dynamic_colors.dart','lib/utils/theme_utils.dart','lib/utils/extension/core_palettes_ext.dart','lib/utils/share_utils.dart','test/utils')
     $paths += @('lib/pages/common','lib/pages/article/view.dart','lib/pages/dynamics/view.dart','lib/pages/dynamics_detail/view.dart','lib/pages/dynamics_topic/view.dart','lib/pages/fav/video','lib/pages/fav_detail/controller.dart','lib/pages/history/controller.dart','lib/pages/history/base_controller.dart','lib/pages/history_search/controller.dart','lib/pages/follow/view.dart','lib/pages/later/controller.dart','lib/pages/main/controller.dart','lib/pages/main/view.dart','lib/pages/main_reply/view.dart','lib/pages/match_info/view.dart','lib/pages/member_opus/view.dart','lib/pages/member_video/view.dart','lib/pages/music/view.dart','lib/pages/rcmd/controller.dart','lib/pages/search_panel/controller.dart','lib/pages/search_panel/all/controller.dart','lib/pages/video/reply/view.dart','lib/common/widgets/dialog/export_import.dart','lib/common/widgets/loading_widget','lib/common/widgets/scroll_intent.dart','lib/services/account_service.dart','lib/utils/accounts.dart','lib/utils/video_utils.dart','test/common/widgets','test/pages/common','test/plugin/pl_player')
     Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + ($paths | Select-Object -Unique)) $context.source
     Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/services','test/pages/setting','test/common/widgets','test/pages/common','test/plugin/pl_player','test/utils/dynamic_share_test.dart','test/utils/soft_dynamic_colors_test.dart','test/utils/advanced_materials_test.dart','test/utils/video_quality_select_test.dart','test/release_identity_test.dart') $context.source
@@ -133,6 +136,7 @@ try {
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
             $androidArguments = @('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true')
             if ($AcceptanceBuild) { $androidArguments += '--android-project-arg=spyAcceptance=true' }
+            $androidArguments += "--android-project-arg=spyImpeller=$($AndroidRenderer -eq 'impeller')".ToLowerInvariant()
             Invoke-SpyNative $sdk.executable ($androidArguments + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
             $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools

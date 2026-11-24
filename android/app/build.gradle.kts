@@ -20,6 +20,8 @@ if (!isBuiltInKotlinEnabled) {
 
 val spyRelease = JsonSlurper().parse(file("../../tool/spy/release.json")) as Map<*, *>
 val spyAcceptance = project.findProperty("spyAcceptance")?.toString() == "true"
+val spyImpeller = project.findProperty("spyImpeller")?.toString() == "true"
+require(!spyImpeller || spyAcceptance) { "Impeller is an acceptance-only experiment" }
 
 android {
     namespace = "com.example.piliplus"
@@ -32,6 +34,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["spyEnableImpeller"] = spyImpeller.toString()
         applicationId = spyRelease["androidApplicationId"] as String
         minSdk = flutter.minSdkVersion
         targetSdk = 37

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:PiliPlus/common/widgets/android_liquid_glass_navigation.dart';
 import 'package:PiliPlus/common/widgets/scroll_intent.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/floating_navigation_bar.dart';
@@ -206,6 +207,30 @@ class _MainAppState extends PopScopeState<MainApp>
                 .toList(),
           ),
         );
+      }
+
+      if (Platform.isAndroid) {
+        final fallback = bottomNav;
+        bottomNav = Obx(() {
+          if (!_mainController.androidLiquidGlassNavigation.value) {
+            return fallback;
+          }
+          return AndroidLiquidGlassNavigationBar(
+            selectedIndex: _mainController.selectedIndex.value,
+            onSelected: _mainController.setIndex,
+            fallback: fallback,
+            destinations: _mainController.navigationBars
+                .map(
+                  (type) => AndroidGlassDestination(
+                    id: type.name,
+                    label: type.label,
+                    icon: _buildIcon(type: type),
+                    selectedIcon: _buildIcon(type: type, selected: true),
+                  ),
+                )
+                .toList(),
+          );
+        });
       }
 
       if (Platform.isIOS) {

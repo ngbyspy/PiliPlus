@@ -117,3 +117,11 @@ arm64 IPA。没有 Apple 证书也可以完成构建，安装由用户自行签�
 用户确认 P05/P07 经代码审查和模拟验证后直接纳入正式源码，免专项人工验收。本次 P05 沿用已保留的 P04 倍速状态保护：预缓冲秒数随当前倍速改变，临时加速结束恢复；字节上限、直播和本地文件缓存策略保持原值，缓存属性更新失败不应阻断正常倍速。P07 在现有流已满足目标画质条件时先初始化播放器，再补充较低画质信息；较低目标仍先补全，过期或已关闭页面的补充结果不写回。
 
 本次只提交 iOS 测试 IPA（com.spy.piliPlus.dev），主要验收 G01；Windows、Android 不编译。正式分支只提升播放器相关代码及必要的 P04 保护，不带入 G01 或其他未验收实验。正式源码推送使用跳过 CI 标记，避免附带触发正式 IPA。测试云编译提交后立即停止跟进，等待用户报告结果。本地第三批入口用 `tool/spy/render-acceptance.py --batch 3` 生成。
+
+## Android 液态玻璃性能实验（2026-11-24）
+
+iPad 第三批 G01 已获用户安装验收通过，验收与正式 IPA 均默认 Release。dev Bundle ID 不代表 Debug 编译。
+
+Android 本轮采用 vendored flutter_liquid_glasses 0.1.3（Apache-2.0，固定来源见 third_party/flutter_liquid_glasses/UPSTREAM.md）。仅适配底栏，外观设置中的「液态玻璃底栏（实验）」默认关闭。支持真实背景折射和按压滑动透镜，保留图标、角标、栏目顺序、重复点击刷新与既有滚动收起。不支持 shader filter 或高对比度时恢复原底栏。
+
+同一提交分别使用 -AndroidBuildMode profile / release 与 -AndroidRenderer impeller 构建独立验收 APK。正式 Android 的渲染器保持原配置。两包沿用同一个 dev 包名和签名，可以互相覆盖并保留测试数据，不能同时安装成两份；均不覆盖 SPY 正式版或上游。Profile 通过 ext.spy.glass 按需采集有界 FrameTiming 数据，不收集页面内容。Release 不注册该诊断入口。性能结论需以实际设备测量与 Release 手感分别记录。

@@ -1099,6 +1099,11 @@ abstract final class Pref {
   static bool get iosLiquidGlassNavigation =>
       _setting.get(SettingBoxKey.iosLiquidGlassNavigation, defaultValue: false);
 
+  static bool get androidLiquidGlassNavigation => _setting.get(
+    SettingBoxKey.androidLiquidGlassNavigation,
+    defaultValue: false,
+  );
+
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
 

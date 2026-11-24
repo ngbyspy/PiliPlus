@@ -136,10 +136,13 @@ try {
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
             $androidArguments = @('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true')
             if ($AcceptanceBuild) { $androidArguments += '--android-project-arg=spyAcceptance=true' }
-            $androidArguments += "--android-project-arg=spyImpeller=$($AndroidRenderer -eq 'impeller')".ToLowerInvariant()
+            $impellerFlag = ($AndroidRenderer -eq 'impeller').ToString().ToLowerInvariant()
+            $androidArguments += "--android-project-arg=spyImpeller=$impellerFlag"
             Invoke-SpyNative $sdk.executable ($androidArguments + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
             $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
+            $apkIdentity['impellerEnabled'] = Get-SpyAndroidImpeller $builtApk $androidTools
+            if ($apkIdentity.impellerEnabled -ne ($AndroidRenderer -eq 'impeller')) { throw 'APK renderer metadata differs from the selected experiment renderer' }
             if ($AcceptanceBuild) {
                 if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or $apkIdentity.debuggable -ne ($packageProfile.mode -eq 'debug') -or $apkIdentity.displayName -cne $packageProfile.displayName -or $apkIdentity.certificateSha256 -ceq $context.release.androidCertificateSha256) { throw 'Acceptance APK identity, build mode or separate signing lineage is incorrect' }
                 $apkIdentity['updatesPreviousSpy'] = $false

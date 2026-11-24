@@ -85,6 +85,15 @@ function Get-SpyAndroidApkIdentity([string]$Path, $Tools) {
     }
 }
 
+function Get-SpyAndroidImpeller([string]$Path, $Tools) {
+    $manifest = & $Tools.aapt dump xmltree $Path AndroidManifest.xml
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect APK renderer metadata' }
+    $pattern = '(?i)"io\.flutter\.embedding\.android\.EnableImpeller"[^\r\n]*\r?\n\s*A: android:value[^\r\n]*\(type 0x12\)0x([0-9a-f]+)'
+    $matches = [regex]::Matches(($manifest -join "`n"), $pattern)
+    if ($matches.Count -ne 1 -or $matches[0].Groups[1].Value -notin @('0','ffffffff')) { throw 'APK must declare one boolean Impeller setting' }
+    $matches[0].Groups[1].Value -ieq 'ffffffff'
+}
+
 function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance, [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release') {
     switch ($Platform) {
         'Android' {

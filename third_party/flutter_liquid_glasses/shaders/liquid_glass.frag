@@ -159,7 +159,31 @@ void sourceOver(inout vec3 color, inout float alpha, vec3 source, float coverage
 
 void main() {
     vec2 coord = FlutterFragCoord().xy;
-    vec2 localCoord = coord - u_card_origin;
+    // Negative glow alpha is reserved for the opt-in Profile inspector.
+    float probe = -u_glow_alpha - 100.0;
+    if (probe > 0.5 && probe < 1.5 || probe > 6.5 && probe < 7.5) {
+        fragColor = texture(u_texture_input, localUv(coord));
+        return;
+    }
+    if (probe > 1.5 && probe < 2.5) {
+        fragColor = vec4(u_size / 4096.0, 0.0, 1.0);
+        return;
+    }
+    if (probe > 2.5 && probe < 3.5) {
+        fragColor = vec4(coord / 4096.0, 0.0, 1.0);
+        return;
+    }
+    vec2 origin = u_card_origin;
+    if (probe > 3.5 && probe < 4.5) {
+        origin = min(origin, max(u_size - u_card_size, vec2(0.0)));
+    }
+    if (probe > 4.5 && probe < 5.5) {
+        origin = max((u_size - u_card_size) * 0.5, vec2(0.0));
+    }
+    if (probe > 5.5 && probe < 6.5) {
+        origin = vec2(0.0);
+    }
+    vec2 localCoord = coord - origin;
     vec2 halfSize = u_card_size * 0.5;
     vec2 centeredCoord = localCoord - halfSize;
 

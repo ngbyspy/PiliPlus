@@ -7,6 +7,8 @@ import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_liquid_glasses/flutter_liquid_glasses.dart'
+    show GlassDebugProbe;
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 
@@ -72,6 +74,9 @@ abstract final class GlassPerformance {
           );
           Get.find<MainController>().androidLiquidGlassNavigation.value =
               enabled;
+        case 'probe':
+          GlassDebugProbe.mode.value =
+              (int.tryParse(params['mode'] ?? '0') ?? 0).clamp(0, 8);
         case 'status':
           break;
         default:
@@ -84,6 +89,9 @@ abstract final class GlassPerformance {
         jsonEncode({
           'type': 'GlassPerformance',
           'mode': 'profile',
+          'probeMode': GlassDebugProbe.mode.value,
+          'loadedShaders': GlassDebugProbe.loaded,
+          'failedShaders': GlassDebugProbe.failed,
           'shaderSupported': ui.ImageFilter.isShaderFilterSupported,
           'enabled': Pref.androidLiquidGlassNavigation,
           'recording': _recording,

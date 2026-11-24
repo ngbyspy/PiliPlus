@@ -93,6 +93,18 @@ abstract final class GlassPerformance {
           'loadedShaders': GlassDebugProbe.loaded,
           'failedShaders': GlassDebugProbe.failed,
           'shaderSupported': ui.ImageFilter.isShaderFilterSupported,
+          'accessibleNavigation': ui
+              .PlatformDispatcher
+              .instance
+              .accessibilityFeatures
+              .accessibleNavigation,
+          'highContrast':
+              ui.PlatformDispatcher.instance.accessibilityFeatures.highContrast,
+          'disableAnimations': ui
+              .PlatformDispatcher
+              .instance
+              .accessibilityFeatures
+              .disableAnimations,
           'enabled': Pref.androidLiquidGlassNavigation,
           'recording': _recording,
           'truncated': _truncated,

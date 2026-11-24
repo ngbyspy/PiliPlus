@@ -56,52 +56,57 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 480),
         child: SizedBox(
           width: double.infinity,
-          child: GlassTheme(
-            data: GlassThemeData(
-              menuSurface: colors.surface,
-              fallbackSurface: colors.surface,
-            ),
-            child: GlassSegmentedControl<String>(
-              height: 64,
-              inset: 4,
-              blurSigma: 2,
-              segments: destinations
-                  .map(
-                    (item) => GlassSegment(value: item.id, label: item.label),
-                  )
-                  .toList(),
-              selected: destinations[current].id,
-              onChanged: select,
-              onReselected: select,
-              itemBuilder: (context, segment, active) {
-                final item = destinations.firstWhere(
-                  (item) => item.id == segment.value,
-                );
-                final color = active ? colors.primary : colors.onSurface;
-                return IconTheme(
-                  data: IconThemeData(color: color, size: 23),
-                  child: Column(
-                    key: ValueKey('glass-nav-${item.id}'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      active ? item.selectedIcon : item.icon,
-                      const SizedBox(height: 3),
-                      Text(
-                        item.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: active
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+          // accessibleNavigation describes assistive input, not a request for
+          // opaque surfaces. High contrast already uses the original bar above.
+          child: ReducedTransparencyScope(
+            reduceTransparency: false,
+            child: GlassTheme(
+              data: GlassThemeData(
+                menuSurface: colors.surface,
+                fallbackSurface: colors.surface,
+              ),
+              child: GlassSegmentedControl<String>(
+                height: 64,
+                inset: 4,
+                blurSigma: 2,
+                segments: destinations
+                    .map(
+                      (item) => GlassSegment(value: item.id, label: item.label),
+                    )
+                    .toList(),
+                selected: destinations[current].id,
+                onChanged: select,
+                onReselected: select,
+                itemBuilder: (context, segment, active) {
+                  final item = destinations.firstWhere(
+                    (item) => item.id == segment.value,
+                  );
+                  final color = active ? colors.primary : colors.onSurface;
+                  return IconTheme(
+                    data: IconThemeData(color: color, size: 23),
+                    child: Column(
+                      key: ValueKey('glass-nav-${item.id}'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        active ? item.selectedIcon : item.icon,
+                        const SizedBox(height: 3),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: active
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),

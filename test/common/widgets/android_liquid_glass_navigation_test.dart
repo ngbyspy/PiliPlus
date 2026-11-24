@@ -92,4 +92,41 @@ void main() {
     expect(selected, ['home']);
     expect(tester.binding.transientCallbackCount, 0);
   });
+  testWidgets(
+    'assistive navigation does not turn an opted-in glass thumb opaque',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(accessibleNavigation: true),
+            child: ReducedTransparencyScope(
+              reduceTransparency: false,
+              child: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: GlassSegmentedControl<String>(
+                    height: 64,
+                    selected: 'home',
+                    segments: const [
+                      GlassSegment(value: 'home', label: '首页'),
+                      GlassSegment(value: 'mine', label: '我的'),
+                    ],
+                    onChanged: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Software tests use the documented blur fallback. An opaque accessibility
+      // branch removes both backdrop filters and obscures the selected label.
+      expect(find.byType(BackdropFilter), findsNWidgets(2));
+      expect(find.bySemanticsLabel('首页'), findsOneWidget);
+      expect(find.bySemanticsLabel('我的'), findsOneWidget);
+      semantics.dispose();
+    },
+  );
 }

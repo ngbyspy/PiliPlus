@@ -28,6 +28,20 @@ PlayUrlModel _playUrl(List<VideoQuality> videoIds) => PlayUrlModel.fromJson({
 });
 
 void main() {
+  test('startup defers only when no lower preferred stream is needed', () {
+    final data = _playUrl([VideoQuality.high1080, VideoQuality.clear480]);
+    expect(data.canStartBeforeQualitySupplement(80), isTrue);
+    expect(data.canStartBeforeQualitySupplement(127), isTrue);
+    expect(data.canStartBeforeQualitySupplement(64), isFalse);
+    expect(data.canStartBeforeQualitySupplement(null), isFalse);
+    data.dash!.video = data.dash!.video!.reversed.toList();
+    expect(data.canStartBeforeQualitySupplement(64), isFalse);
+    expect(data.canStartBeforeQualitySupplement(80), isTrue);
+    data.dash!.video!.clear();
+    expect(data.canStartBeforeQualitySupplement(80), isFalse);
+    expect(PlayUrlModel().canStartBeforeQualitySupplement(80), isFalse);
+  });
+
   test('find target quality', () {
     final playUrl = _playUrl(VideoQuality.values);
     final dash = playUrl.dash!;

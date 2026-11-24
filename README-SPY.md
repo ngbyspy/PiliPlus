@@ -91,3 +91,9 @@ arm64 IPA。没有 Apple 证书也可以完成构建，安装由用户自行签�
 使用 `tool/spy/build.ps1 -Platform Windows/Android/iOS -AcceptanceBuild -OutputRoot <测试包输出目录>` 从干净的 `spy/dev` 打包。Windows 使用上游兼容的 Release 程序和原数据目录，允许原地测试；Android 必须是可与正式版并存的 `com.ngbyspy.piliplus.spy.debug` Debug APK，使用 debug 签名；iOS 使用 Release 模式构建可自签 IPA，但临时把所有 Runner 配置切换为 `com.spy.piliPlus.dev` 并核验实际产物，源项目正式 ID 仍为 `com.spy.piliPlus`。
 
 各平台与各功能分别记录人工验收。自动化测试和打包成功不代表用户测试通过。S01、S02 按用户决定免专项人工验收，随功能包回归。提交 iOS 云编译后停止监控，等待用户报告结果。
+
+## 已提升的播放器改进（2026-11-24）
+
+P05/P07 参照 MXWF0 的 #3665 按功能提取，已完成代码审查和模拟检查，按用户要求免专项人工验收并纳入正式源码。P05 搭配此前保留的 P04 倍速时序保护，网络点播的预缓冲秒数跟随倍速、松手恢复，字节上限及直播/本地缓存策略不变。P07 仅在已返回流足以满足目标画质时延后补充较低画质，补充结果受页面存活和原响应身份检查保护。
+
+本次只更新正式源码，不构建 Windows/Android，也不触发正式 IPA。G01 iOS 液态玻璃及其他未验收的第二批实验不随此提升；G01 仍在 spy/dev 的第三批 iOS 测试包中验收。

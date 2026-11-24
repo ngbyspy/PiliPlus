@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 class AccountService extends GetxService {
   final RxString face = ''.obs;
   final RxBool isLogin = false.obs;
+  final accountRevision = 0.obs;
 
   @override
   void onInit() {

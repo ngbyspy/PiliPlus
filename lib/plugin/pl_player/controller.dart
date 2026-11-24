@@ -54,7 +54,7 @@ import 'package:PiliPlus/utils/utils.dart';
 import 'package:archive/archive.dart' show getCrc32;
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import 'package:flutter/services.dart'
     show DeviceOrientation, HapticFeedback, KeyDownEvent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -110,7 +110,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   int _playerCount = 0;
 
-  late double lastPlaybackSpeed = 1.0;
+  double lastPlaybackSpeed = Pref.playSpeedDefault;
+  int _speedRequest = 0;
   final RxDouble _playbackSpeed = Pref.playSpeedDefault.obs;
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
@@ -670,6 +671,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
   }
 
+  @visibleForTesting
+  PlPlayerController.forTesting();
+
   // 添加一个私有构造函数
   PlPlayerController._() {
     if (PlatformUtils.isMobile && !DeviceUtils.isChromeOS) {
@@ -999,7 +1003,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (_instance == null) return;
     // 设置倍速
     if (_videoPlayerController != null) {
-      final speed = isLive ? 1.0 : playbackSpeed;
+      final speed = isLive ? 1.0 : lastPlaybackSpeed;
       if (_videoPlayerController!.state.rate != speed) {
         await setPlaybackSpeed(speed);
       }
@@ -1232,12 +1236,16 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   }
 
   /// 设置倍速
-  Future<void> setPlaybackSpeed(double speed) async {
-    lastPlaybackSpeed = playbackSpeed;
-
-    if (speed == _videoPlayerController?.state.rate) return;
-
-    await _videoPlayerController?.setRate(speed);
+  Future<void> setPlaybackSpeed(double speed, {bool temporary = false}) async {
+    if (!temporary) lastPlaybackSpeed = speed;
+    final player = videoPlayerController;
+    final request = ++_speedRequest;
+    // Coalesce rapid gestures before crossing the native boundary. Always queue
+    // the latest rate, even if native state still reports that same value.
+    await Future<void>.value();
+    if (request != _speedRequest || player != videoPlayerController) return;
+    await player?.setRate(speed);
+    if (request != _speedRequest || player != videoPlayerController) return;
     if (!isLive) _playbackSpeed.value = speed;
     _updatePlaybackState();
     if (danmakuController != null) {
@@ -1399,13 +1407,14 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         longPressStatus.value = val;
         HapticFeedback.lightImpact();
         await setPlaybackSpeed(
-          enableAutoLongPressSpeed ? playbackSpeed * 2 : longPressSpeed,
+          enableAutoLongPressSpeed ? lastPlaybackSpeed * 2 : longPressSpeed,
+          temporary: true,
         );
       }
     } else {
       // if (kDebugMode) debugPrint('$playbackSpeed');
       longPressStatus.value = val;
-      await setPlaybackSpeed(lastPlaybackSpeed);
+      await setPlaybackSpeed(lastPlaybackSpeed, temporary: true);
     }
   }
 

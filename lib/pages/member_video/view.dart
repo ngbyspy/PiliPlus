@@ -154,8 +154,7 @@ class _MemberVideoState extends State<MemberVideo>
         body: fabAnimWrapper(child: child),
         fab: Obx(
           () => !_controller.isLocating
-              ? SlideTransition(
-                  position: fabAnimation,
+              ? fabTransition(
                   child: Padding(
                     padding: .only(
                       right: kFloatingActionButtonMargin,

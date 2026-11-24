@@ -66,6 +66,7 @@ import 'package:PiliPlus/utils/mobile_observer.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/route_scroll_snapshot.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/theme_utils.dart';
@@ -124,6 +125,8 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       videoDetailController.plPlayerController.pipNoDanmaku;
 
   bool isShowing = true;
+  bool _skipAutoExpandOnRouteResume = false;
+  RouteScrollSnapshot? _scrollBeforeRoute;
 
   bool get isFullScreen =>
       videoDetailController.plPlayerController.isFullScreen.value;
@@ -223,7 +226,10 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     try {
       if (videoDetailController.scrollCtr.hasClients) {
         if (isPlaying) {
-          if (!videoDetailController.isExpanding &&
+          if (_skipAutoExpandOnRouteResume) {
+            _skipAutoExpandOnRouteResume = false;
+            videoDetailController.refreshPage();
+          } else if (!videoDetailController.isExpanding &&
               videoDetailController.scrollCtr.offset != 0 &&
               !videoDetailController.animationController.isAnimating) {
             videoDetailController.isExpanding = true;
@@ -377,6 +383,11 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     super.didPushNext();
     isShowing = false;
 
+    _scrollBeforeRoute = RouteScrollSnapshot.capture([
+      videoDetailController.scrollCtr,
+      videoDetailController.introScrollCtr,
+    ]);
+
     removeObserverMobile(this);
 
     if (Platform.isAndroid && !videoDetailController.setSystemBrightness) {
@@ -403,6 +414,14 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   // 返回当前页面时
   void didPopNext() {
     super.didPopNext();
+
+    final snapshot = _scrollBeforeRoute;
+    _scrollBeforeRoute = null;
+    if (snapshot != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && isShowing) snapshot.restore();
+      });
+    }
 
     if (videoDetailController.plPlayerController.isCloseAll) {
       return;
@@ -443,6 +462,11 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     plPlayerController
       ?..addStatusLister(playerListener)
       ..addPositionListener(positionListener);
+    _skipAutoExpandOnRouteResume =
+        videoDetailController.autoPlay &&
+        videoDetailController.playerStatus?.isPlaying == true &&
+        videoDetailController.scrollCtr.hasClients &&
+        videoDetailController.scrollCtr.offset != 0;
     if (videoDetailController.autoPlay) {
       videoDetailController.playerInit(
         autoplay: videoDetailController.playerStatus?.isPlaying ?? false,

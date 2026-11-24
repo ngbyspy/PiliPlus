@@ -1,0 +1,3 @@
+<resources>
+    <bool name="spy_profile_diagnostics">true</bool>
+</resources>

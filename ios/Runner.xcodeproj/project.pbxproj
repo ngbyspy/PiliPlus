@@ -13,6 +13,7 @@
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		A6C2F8E92FCB1A0000C0D3E1 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C2F8E82FCB1A0000C0D3E1 /* SceneDelegate.swift */; };
 		B7D3A9F12FCB1A0000C0D3E1 /* PipPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D3A9F02FCB1A0000C0D3E1 /* PipPlugin.swift */; };
+		D9F5CB112FCB1A0000C0D3E1 /* LiquidGlassNavigationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9F5CB102FCB1A0000C0D3E1 /* LiquidGlassNavigationPlugin.swift */; };
 		C8E4BA012FCB1A0000C0D3E1 /* AudioMixPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = C8E4BA002FCB1A0000C0D3E1 /* AudioMixPlugin.m */; settings = {COMPILER_FLAGS = "-std=gnu11"; }; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -44,6 +45,7 @@
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A6C2F8E82FCB1A0000C0D3E1 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		B7D3A9F02FCB1A0000C0D3E1 /* PipPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipPlugin.swift; sourceTree = "<group>"; };
+		D9F5CB102FCB1A0000C0D3E1 /* LiquidGlassNavigationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassNavigationPlugin.swift; sourceTree = "<group>"; };
 		C8E4BA002FCB1A0000C0D3E1 /* AudioMixPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioMixPlugin.m; sourceTree = "<group>"; };
 		C8E4BA022FCB1A0000C0D3E1 /* AudioMixPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioMixPlugin.h; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				A6C2F8E82FCB1A0000C0D3E1 /* SceneDelegate.swift */,
 				B7D3A9F02FCB1A0000C0D3E1 /* PipPlugin.swift */,
+				D9F5CB102FCB1A0000C0D3E1 /* LiquidGlassNavigationPlugin.swift */,
 				C8E4BA002FCB1A0000C0D3E1 /* AudioMixPlugin.m */,
 				C8E4BA022FCB1A0000C0D3E1 /* AudioMixPlugin.h */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -306,6 +309,7 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				A6C2F8E92FCB1A0000C0D3E1 /* SceneDelegate.swift in Sources */,
 				B7D3A9F12FCB1A0000C0D3E1 /* PipPlugin.swift in Sources */,
+				D9F5CB112FCB1A0000C0D3E1 /* LiquidGlassNavigationPlugin.swift in Sources */,
 				C8E4BA012FCB1A0000C0D3E1 /* AudioMixPlugin.m in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);

@@ -5,6 +5,7 @@ import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/floating_navigation_bar.dart';
 import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/ios_liquid_glass_navigation.dart';
 import 'package:PiliPlus/common/widgets/main_layout.dart';
 import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
 import 'package:PiliPlus/models/common/nav_bar_config.dart';
@@ -205,6 +206,46 @@ class _MainAppState extends PopScopeState<MainApp>
                 .toList(),
           ),
         );
+      }
+
+      if (Platform.isIOS) {
+        final fallback = bottomNav;
+        bottomNav = Obx(() {
+          if (!_mainController.iosLiquidGlassNavigation.value) return fallback;
+          final count = _mainController.dynCount.value;
+          return IosLiquidGlassNavigationBar(
+            selectedIndex: _mainController.selectedIndex.value,
+            onSelected: _mainController.setIndex,
+            fallback: fallback,
+            destinations: _mainController.navigationBars.map((type) {
+              final (symbol, selectedSymbol) = switch (type) {
+                NavigationBarType.home => ('house', 'house.fill'),
+                NavigationBarType.dynamics => (
+                  'play.rectangle',
+                  'play.rectangle.fill',
+                ),
+                NavigationBarType.mine => (
+                  'person.crop.circle',
+                  'person.crop.circle.fill',
+                ),
+              };
+              return IosGlassDestination(
+                id: type.name,
+                label: type.label,
+                symbol: symbol,
+                selectedSymbol: selectedSymbol,
+                badge:
+                    type == NavigationBarType.dynamics &&
+                        count > 0 &&
+                        _mainController.dynamicBadgeMode != .hidden
+                    ? (_mainController.dynamicBadgeMode == .number
+                          ? '$count'
+                          : '')
+                    : null,
+              );
+            }).toList(),
+          );
+        });
       }
 
       if (_mainController.hideBottomBar) {

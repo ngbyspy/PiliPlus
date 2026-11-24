@@ -110,7 +110,12 @@ android {
         }
         if (spyAcceptance) {
             maybeCreate("profile").apply {
-                initWith(getByName("release"))
+                // Keep Flutter's Profile pipeline. Cloning Release also makes
+                // plugin libraries obfuscate independently, producing duplicate
+                // a.a classes under the current Flutter/AGP combination.
+                isMinifyEnabled = false
+                isShrinkResources = false
+                ndk { abiFilters += "arm64-v8a" }
                 signingConfig = signingConfigs["debug"]
                 applicationIdSuffix = ".debug"
                 isDebuggable = false

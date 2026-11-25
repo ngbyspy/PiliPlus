@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 ///
 /// uniform 契约（Impeller ImageFilter.shader）：
 /// - floats[0,1] = u_size：引擎自动绑定输入纹理尺寸，Dart 侧不得写入
-/// - floats[2..28] = 背景参数，顺序即 shader 声明序；装饰由 GlassForeground 绘制
+/// - floats[2..28] = 背景参数，floats[29,30] = 场景/本地缩放；装饰由 GlassForeground 绘制
 class GlassParams {
   const GlassParams({
     this.cornerRadius = 20,
@@ -191,7 +191,7 @@ class GlassParams {
     );
   }
 
-  /// 绑定背景 uniforms 2..28（floats[0,1] 归引擎）。
+  /// 绑定背景 uniforms 2..30（floats[0,1] 归引擎）。
   /// [originX]/[originY]/[w]/[h]：玻璃矩形在场景空间的物理 px。
   void bind(
     ui.FragmentShader shader,
@@ -200,11 +200,15 @@ class GlassParams {
     double w,
     double h, {
     bool backdropColorControlled = false,
+    double scaleX = 1,
+    double scaleY = 1,
   }) {
     // Degenerate capsule guard: an SDF radius beyond min(w,h)/2 makes the
     // rounded-rect distance field turn inside-out. Clamp at the uniform
     // boundary so every caller (and any future per-corner radii) is safe.
-    final maxR = (w < h ? w : h) * 0.5;
+    final localW = w / scaleX;
+    final localH = h / scaleY;
+    final maxR = (localW < localH ? localW : localH) * 0.5;
     final r = cornerRadius.clamp(0.0, maxR);
     shader
       ..setFloat(2, originX)
@@ -233,7 +237,9 @@ class GlassParams {
       ..setFloat(25, glowX)
       ..setFloat(26, glowY)
       ..setFloat(27, glowRadius)
-      ..setFloat(28, glowAlpha);
+      ..setFloat(28, glowAlpha)
+      ..setFloat(29, scaleX)
+      ..setFloat(30, scaleY);
   }
 
   // shouldRepaint 全靠 `params != old.params`——没有 == 就是恒真，

@@ -8,3 +8,5 @@ Vendored for a reproducible Android navigation experiment. Material starts from 
 Local segmented-control changes: custom item builder and theme colors; reselect callback; per-item accessibility actions; cancellation restores the controlled selection without navigation; the visual thumb ignores hit testing so destination semantics remain reachable.
 
 Neutral optics (zero blur/refraction and neutral color controls) paint the surface tint without a backdrop filter. This avoids the idle thumb copy; press/drag still uses the original refraction shader and the track stays refractive.
+
+Backdrop clipping now uses the same local rounded rectangle as the foreground. Shader SDF/lens coordinates undo ancestor X/Y scaling and map sample displacement back to scene space, keeping the refractive edge aligned with the highlight during press/stretch. Segmented-control springs retain their actual target when sleeping; identical held-contact events do not restart motion, and a new press cancels the prior release phase.

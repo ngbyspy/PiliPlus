@@ -46,6 +46,11 @@ uniform vec2 u_glow_pos;     // pointer position in window physical px
 uniform float u_glow_radius; // px
 uniform float u_glow_alpha;  // 0.15 * pressProgress in the original
 
+// Card geometry above is scene-sized, while radii and lens lengths are local
+// physical pixels. Undo ancestor scale for the SDF, then scale refraction back
+// into the scene. This also handles the thumb's nonuniform press stretch.
+uniform vec2 u_card_scale;
+
 out vec4 fragColor;
 
 float radiusAt(vec2 coord, vec4 radii) {
@@ -183,8 +188,9 @@ void main() {
     if (probe > 5.5 && probe < 6.5) {
         origin = vec2(0.0);
     }
-    vec2 localCoord = coord - origin;
-    vec2 halfSize = u_card_size * 0.5;
+    vec2 cardScale = max(u_card_scale, vec2(0.0001));
+    vec2 localCoord = (coord - origin) / cardScale;
+    vec2 halfSize = u_card_size / cardScale * 0.5;
     vec2 centeredCoord = localCoord - halfSize;
 
     float radius = radiusAt(centeredCoord, u_corner_radii);
@@ -214,7 +220,7 @@ void main() {
         vec2 gradSum = grad + u_depth_effect * depthVec;
         if (length(gradSum) > 1e-6) grad = normalize(gradSum);
 
-        vec2 refractedCoord = coord + d * grad;
+        vec2 refractedCoord = coord + d * grad * cardScale;
 
         if (u_chromatic > 0.0) {
             // Faithful 7-path dispersion (ROYGCBP + purple), weighted channels.
@@ -223,7 +229,7 @@ void main() {
             // multiplication outside the corner-ness term — the signed product
             // and per-channel weights are unchanged).
             float dispersionIntensity = u_chromatic * ((centeredCoord.x * centeredCoord.y) / (halfSize.x * halfSize.y));
-            vec2 dispersed = d * grad * dispersionIntensity;
+            vec2 dispersed = d * grad * cardScale * dispersionIntensity;
 
             vec4 sRed    = sampleBackdrop(refractedCoord + dispersed);
             vec4 sOrange = sampleBackdrop(refractedCoord + dispersed * (2.0 / 3.0));

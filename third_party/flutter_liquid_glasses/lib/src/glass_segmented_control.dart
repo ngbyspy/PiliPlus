@@ -170,6 +170,9 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
     _pointer = event.pointer;
     _downX = event.localPosition.dx;
     _dragging = false;
+    // A new contact owns the press even if the preceding tap was still waiting
+    // for its release tick. Do not let that old phase deflate a held thumb.
+    _holdingPress = false;
     _velTracker.reset();
     _vel.snap(0); // press() → velocityTracker.resetTracking() + velocity = 0
     if (!_motionEnabled) return;
@@ -198,7 +201,9 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
     final target = (_dragStartIndex + totalDx / segW).clamp(0.0, n);
     final frac = (totalDx / (segW * widget.segments.length)).clamp(-1.0, 1.0);
     final eased = 1 - (1 - frac.abs()) * (1 - frac.abs());
-    _panel.setTarget(4.0 * frac.sign * eased);
+    final panelTarget = 4.0 * frac.sign * eased;
+    if (_pos.target == target && _panel.target == panelTarget) return;
+    _panel.setTarget(panelTarget);
     if (_motionEnabled) {
       _pos.setTarget(target);
     } else {
@@ -216,6 +221,8 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
     if (_pointer != event.pointer) return;
     _pointer = null;
     _panel.setTarget(0);
+    _velTracker.reset();
+    _vel.setTarget(0);
     if (cancelled) {
       _dragging = false;
       _animateTo(_selectedIndex.toDouble());
@@ -223,9 +230,6 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
     }
     // endTabDrag: tracker reset, no post-release tracking — the velocity
     // spring decays to 0 on its own (residual wobble, no new stretch).
-    _velTracker.reset();
-    _vel.setTarget(0);
-
     if (!_dragging && !cancelled && segW > 0) {
       final i = ((event.localPosition.dx - widget.inset) / segW).floor().clamp(
         0,
@@ -294,7 +298,10 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
     _panel.step(dt);
 
     // Upstream release(): press holds until within 0.02 of the target index.
-    if (_holdingPress && !_dragging && (_pos.x - _pos.target).abs() < 0.02) {
+    if (_holdingPress &&
+        _pointer == null &&
+        !_dragging &&
+        (_pos.x - _pos.target).abs() < 0.02) {
       _holdingPress = false;
       _press.setTarget(0);
       _scaleX.setTarget(1);
@@ -312,8 +319,14 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
         _scaleY.settled &&
         _panel.settled) {
       _pos.snap(_pos.target);
-      _vel.snap(0);
-      _panel.snap(0);
+      _vel.snap(_vel.target);
+      _press.snap(_press.target);
+      _scaleX.snap(_scaleX.target);
+      _scaleY.snap(_scaleY.target);
+      // The held contact can still request a nonzero rubber-band offset.
+      // Snapping it to zero here made repeated stationary touch events restart
+      // the panel spring, creating a visible sawtooth movement.
+      _panel.snap(_panel.target);
       _ticker?.stop();
       _last = Duration.zero;
     }

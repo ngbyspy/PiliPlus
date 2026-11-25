@@ -200,7 +200,11 @@ class _GlassSurfaceState extends State<GlassSurface> {
     final params = widget.params.toPhysical(
       MediaQuery.devicePixelRatioOf(context),
     );
-    return ClipRect(
+    // The backdrop and foreground share the same local rounded boundary.
+    // A rectangular filter clip leaves a second plate outside the highlight
+    // when the track/thumb is scaled during a press.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.params.cornerRadius),
       child: _GlassBackdrop(
         key: ValueKey(kProfileMode ? GlassDebugProbe.mode.value : 0),
         program: program,
@@ -363,6 +367,8 @@ class _RenderGlassBackdrop extends RenderProxyBox {
       bounds.width * _dpr,
       bounds.height * _dpr,
       backdropColorControlled: true,
+      scaleX: bounds.width / size.width,
+      scaleY: bounds.height / size.height,
     );
     if (kProfileMode && GlassDebugProbe.mode.value > 0) {
       _shader.setFloat(28, -100.0 - GlassDebugProbe.mode.value);

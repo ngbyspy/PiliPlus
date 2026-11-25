@@ -151,4 +151,60 @@ void main() {
       expect(tester.binding.transientCallbackCount, 0);
     },
   );
+
+  Rect trackBounds(WidgetTester tester) {
+    final box = tester.renderObject<RenderBox>(find.byType(GlassSurface).first);
+    return MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
+  }
+
+  testWidgets('holding a drag keeps the track offset until release', (
+    tester,
+  ) async {
+    await control(tester, <String>[]);
+    await tester.pumpAndSettle();
+    final rest = trackBounds(tester);
+    final start = tester.getCenter(find.text('我的:on'));
+    final gesture = await tester.startGesture(start);
+    await gesture.moveTo(start + const Offset(60, 0));
+    for (var i = 0; i < 180; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    final held = trackBounds(tester);
+    expect(held.center.dx - rest.center.dx, greaterThan(1));
+    for (var i = 0; i < 180; i++) {
+      // Real touch devices can keep reporting the same contact coordinates.
+      await gesture.moveTo(start + const Offset(60, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(trackBounds(tester).center.dx, closeTo(held.center.dx, 0.01));
+    }
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+    expect(trackBounds(tester).center.dx, closeTo(rest.center.dx, 0.01));
+    expect(tester.binding.transientCallbackCount, 0);
+  });
+
+  testWidgets('a fresh held press cancels the previous release phase', (
+    tester,
+  ) async {
+    await control(tester, <String>[]);
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('我的:on')),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+    await gesture.up();
+    // Press again before the release ticker has processed the previous tap.
+    final held = await tester.startGesture(
+      tester.getCenter(find.text('我的:on')),
+    );
+    for (var i = 0; i < 180; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(trackBounds(tester).width, greaterThan(330));
+    await held.cancel();
+    await tester.pumpAndSettle();
+    expect(trackBounds(tester).width, closeTo(320, 0.01));
+  });
 }

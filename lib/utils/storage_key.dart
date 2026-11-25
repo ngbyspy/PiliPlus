@@ -160,6 +160,7 @@ abstract final class SettingBoxKey {
       floatingNavBar = 'floatingNavBar',
       iosLiquidGlassNavigation = 'iosLiquidGlassNavigation',
       androidLiquidGlassNavigation = 'androidLiquidGlassNavigation',
+      androidGlassClarity = 'androidGlassClarity',
       removeSafeArea = 'removeSafeArea',
       angleDegrees = 'angleDegrees',
       liveStream = 'liveStream',

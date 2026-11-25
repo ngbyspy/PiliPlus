@@ -12,3 +12,5 @@ Neutral optics (zero blur/refraction and neutral color controls) paint the surfa
 Backdrop clipping now uses the same local rounded rectangle as the foreground. Shader SDF/lens coordinates undo ancestor X/Y scaling and map sample displacement back to scene space, keeping the refractive edge aligned with the highlight during press/stretch. Segmented-control springs retain their actual target when sleeping; identical held-contact events do not restart motion, and a new press cancels the prior release phase.
 
 Window-space filter geometry is resolved at scene submission rather than only when painting. The glass layer opts out of retained scene reuse so cached navigation subtrees follow ancestor hide/restore transforms. It does not schedule idle frames or run a polling ticker.
+
+The segmented control exposes track surface opacity (default 0.4). This adjusts only the existing tint uniform; label opacity, blur, refraction, highlight and thumb optics remain unchanged. No additional filter is added for the preference.

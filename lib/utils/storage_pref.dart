@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop;
 import 'package:PiliPlus/common/widgets/pair.dart';
@@ -1102,6 +1103,10 @@ abstract final class Pref {
   static bool get androidLiquidGlassNavigation => _setting.get(
     SettingBoxKey.androidLiquidGlassNavigation,
     defaultValue: false,
+  );
+
+  static double get androidGlassClarity => GlassAppearance.normalize(
+    _setting.get(SettingBoxKey.androidGlassClarity),
   );
 
   static bool get removeSafeArea =>

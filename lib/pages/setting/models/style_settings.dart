@@ -28,6 +28,7 @@ import 'package:PiliPlus/pages/mine/controller.dart';
 import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/slide_color_picker.dart';
 import 'package:PiliPlus/pages/setting/widgets/dual_slider_dialog.dart';
+import 'package:PiliPlus/pages/setting/widgets/glass_clarity_setting.dart';
 import 'package:PiliPlus/pages/setting/widgets/multi_select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/ordered_multi_select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
@@ -160,6 +161,22 @@ List<SettingsModel> get styleSettings => [
           Get.find<MainController>().androidLiquidGlassNavigation.value = value;
         }
       },
+    ),
+  if (Platform.isAndroid && ui.ImageFilter.isShaderFilterSupported)
+    WidgetModel(
+      title: '玻璃通透程度',
+      builder: (_) => GlassClaritySetting(
+        value: Pref.androidGlassClarity,
+        onChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassClarity.value = value;
+          }
+        },
+        onSaved: (value) => GStorage.setting.put(
+          SettingBoxKey.androidGlassClarity,
+          value,
+        ),
+      ),
     ),
   if (Platform.isIOS)
     SwitchModel(

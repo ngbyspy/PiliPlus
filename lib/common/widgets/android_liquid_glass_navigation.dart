@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:flutter_liquid_glasses/flutter_liquid_glasses.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -27,12 +28,14 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
     required this.selectedIndex,
     required this.onSelected,
     required this.fallback,
+    this.clarity = GlassAppearance.defaultClarity,
   });
 
   final List<AndroidGlassDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
   final Widget fallback;
+  final double clarity;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +72,7 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
                 height: 64,
                 inset: 4,
                 blurSigma: 2,
+                surfaceOpacity: GlassAppearance.surfaceOpacity(clarity),
                 segments: destinations
                     .map(
                       (item) => GlassSegment(value: item.id, label: item.label),

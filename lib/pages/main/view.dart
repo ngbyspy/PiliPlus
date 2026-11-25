@@ -216,6 +216,7 @@ class _MainAppState extends PopScopeState<MainApp>
             return fallback;
           }
           return AndroidLiquidGlassNavigationBar(
+            clarity: _mainController.androidGlassClarity.value,
             selectedIndex: _mainController.selectedIndex.value,
             onSelected: _mainController.setIndex,
             fallback: fallback,

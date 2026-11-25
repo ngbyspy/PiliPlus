@@ -150,8 +150,8 @@ List<SettingsModel> get styleSettings => [
   ),
   if (Platform.isAndroid && ui.ImageFilter.isShaderFilterSupported)
     SwitchModel(
-      title: '液态玻璃底栏（实验）',
-      subtitle: '按住底栏滑动选择栏目；仅底栏布局生效，可关闭比较流畅度',
+      title: '液态玻璃底栏',
+      subtitle: '按住底栏滑动选择栏目；仅底栏布局生效',
       leading: const Icon(Icons.blur_on),
       setKey: SettingBoxKey.androidLiquidGlassNavigation,
       defaultVal: false,

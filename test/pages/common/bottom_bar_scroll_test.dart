@@ -28,6 +28,9 @@ class _Shell extends MainController {
   @override
   // ignore: must_call_super
   void onClose() {}
+
+  @override
+  void setSearchBar() {}
 }
 
 class _Account extends AccountService {
@@ -76,6 +79,44 @@ void main() {
   tearDown(Get.reset);
 
   for (final sync in [false, true]) {
+    testWidgets(
+      'cached page activation restores a partially hidden bar (sync=$sync)',
+      (tester) async {
+        Get.put<AccountService>(_Account());
+        final shell = Get.put<MainController>(_Shell(sync));
+        final scroll = ScrollController();
+        final active = ValueNotifier(true);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ValueListenableBuilder<bool>(
+              valueListenable: active,
+              child: _Feed(scroll),
+              builder: (_, enabled, child) =>
+                  TickerMode(enabled: enabled, child: child!),
+            ),
+          ),
+        );
+        if (sync) {
+          shell.barOffset!.value = Style.topBarHeight * .55;
+        } else {
+          shell.showBottomBar!.value = false;
+        }
+        active.value = false;
+        await tester.pump();
+        active.value = true;
+        await tester.pumpAndSettle();
+        if (sync) {
+          expect(shell.barOffset!.value, 0);
+        } else {
+          expect(shell.showBottomBar!.value, isTrue);
+        }
+        expect(shell.bottomBarSettling.value, isTrue);
+        await tester.pumpWidget(const SizedBox.shrink());
+        scroll.dispose();
+        active.dispose();
+      },
+    );
+
     testWidgets('restores the bar when the feed reaches its top (sync=$sync)', (
       tester,
     ) async {

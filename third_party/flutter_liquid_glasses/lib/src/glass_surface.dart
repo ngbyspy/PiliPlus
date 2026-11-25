@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kProfileMode;
 import 'package:flutter/rendering.dart';
 
 import 'glass_foreground.dart';
+import 'glass_backdrop_layer.dart';
 import 'glass_debug_probe.dart';
 import 'glass_params.dart';
 import 'glass_shader_assets.dart';
@@ -16,8 +17,8 @@ import 'reduced_transparency.dart';
 /// 管线：场景内容 → ColorFilter → ImageFilter.blur(sigma) → liquid_glass.frag（折射/色散/
 /// 染色/指尖 glow）→ 内容 → 原生描边高光 → 内阴影。
 ///
-/// 几何在 paint 阶段绑定：LayoutBuilder 首次布局时祖先还未放置子节点，
-/// 此时读 localToGlobal 会得到零原点，导致远离左上角的玻璃被 SDF 裁光。
+/// 几何在场景合成时绑定：缓存子层可能跟随祖先移动而不重新 paint，
+/// 需在提交滤镜前读取最终位置，避免 SDF 停在旧原点导致透明或错位。
 /// 输入纹理采样由引擎 u_size 归一化，卡片几何只用于 SDF。
 class GlassSurface extends StatefulWidget {
   const GlassSurface({
@@ -354,8 +355,14 @@ class _RenderGlassBackdrop extends RenderProxyBox {
   @override
   void paint(PaintingContext context, Offset offset) {
     if (child == null || size.isEmpty) return;
-    // Read geometry only after layout/placement. A parent moving this card
-    // without rebuilding it must still update the uniforms on this paint.
+    final backdropLayer =
+        (layer ??= GlassBackdropFilterLayer(_resolveFilter))
+            as GlassBackdropFilterLayer;
+    context.pushLayer(backdropLayer, super.paint, offset);
+  }
+
+  ui.ImageFilter _resolveFilter() {
+    // Read after the final ancestor transforms, including retained-only moves.
     final bounds = MatrixUtils.transformRect(
       getTransformTo(null),
       Offset.zero & size,
@@ -384,7 +391,7 @@ class _RenderGlassBackdrop extends RenderProxyBox {
         _params.saturation == 1 &&
         _params.brightness == 0 &&
         _params.contrast == 1;
-    final filter = kProfileMode && GlassDebugProbe.mode.value == 7
+    return kProfileMode && GlassDebugProbe.mode.value == 7
         ? ui.ImageFilter.shader(_shader)
         : ui.ImageFilter.compose(
             outer: ui.ImageFilter.shader(_shader),
@@ -395,12 +402,6 @@ class _RenderGlassBackdrop extends RenderProxyBox {
                     inner: _params.colorFilter,
                   ),
           );
-    final backdropLayer =
-        (layer ??= BackdropFilterLayer()) as BackdropFilterLayer;
-    backdropLayer
-      ..filter = filter
-      ..blendMode = BlendMode.srcOver;
-    context.pushLayer(backdropLayer, super.paint, offset);
   }
 
   @override

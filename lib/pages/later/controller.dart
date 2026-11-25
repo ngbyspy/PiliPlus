@@ -25,6 +25,9 @@ mixin BaseLaterController
   ValueChanged<int>? updateCount;
 
   @override
+  Object get dataScope => Accounts.main;
+
+  @override
   void onRemove() {
     showConfirmDialog(
       context: Get.context!,
@@ -84,7 +87,7 @@ class LaterController extends MultiSelectController<LaterData, LaterItemModel>
   LaterController(this.laterViewType);
   final LaterViewType laterViewType;
 
-  late final mid = Accounts.main.mid;
+  int get mid => Accounts.main.mid;
 
   final RxBool asc = false.obs;
 

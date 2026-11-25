@@ -34,6 +34,7 @@ void main() {
     expect(data.canStartBeforeQualitySupplement(127), isTrue);
     expect(data.canStartBeforeQualitySupplement(64), isFalse);
     expect(data.canStartBeforeQualitySupplement(null), isFalse);
+    // Do not assume server order when deciding whether startup is safe.
     data.dash!.video = data.dash!.video!.reversed.toList();
     expect(data.canStartBeforeQualitySupplement(64), isFalse);
     expect(data.canStartBeforeQualitySupplement(80), isTrue);
@@ -41,6 +42,31 @@ void main() {
     expect(data.canStartBeforeQualitySupplement(80), isFalse);
     expect(PlayUrlModel().canStartBeforeQualitySupplement(80), isFalse);
   });
+
+  test(
+    'advertised quality without a stream selects an actual lower stream',
+    () {
+      final playUrl = _playUrl([
+        VideoQuality.high1080,
+        VideoQuality.clear480,
+      ])..acceptQuality = [80, 64, 32];
+      playUrl.supportFormats!.insert(
+        1,
+        FormatItem(quality: 64, codecs: VideoDecodeFormatType.AV1.codes),
+      );
+      final result = VideoUtils.findTargetVideo(
+        playUrl.dash!.video!,
+        64,
+        playUrl.acceptQuality,
+        playUrl.supportFormats!,
+        [.AV1],
+      );
+      expect(result.$1, 32);
+      expect(result.$1, result.$4.id);
+      expect(result.$2.quality, result.$4.id);
+      expect(result.$4, same(playUrl.dash!.video!.last));
+    },
+  );
 
   test('find target quality', () {
     final playUrl = _playUrl(VideoQuality.values);

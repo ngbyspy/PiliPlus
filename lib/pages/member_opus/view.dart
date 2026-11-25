@@ -86,8 +86,7 @@ class _MemberOpusState extends State<MemberOpus>
         ),
       ),
       fab: _controller.filter?.isNotEmpty == true
-          ? SlideTransition(
-              position: fabAnimation,
+          ? fabTransition(
               child: Padding(
                 padding: .only(
                   right: kFloatingActionButtonMargin,

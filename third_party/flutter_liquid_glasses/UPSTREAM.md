@@ -10,3 +10,5 @@ Local segmented-control changes: custom item builder and theme colors; reselect 
 Neutral optics (zero blur/refraction and neutral color controls) paint the surface tint without a backdrop filter. This avoids the idle thumb copy; press/drag still uses the original refraction shader and the track stays refractive.
 
 Backdrop clipping now uses the same local rounded rectangle as the foreground. Shader SDF/lens coordinates undo ancestor X/Y scaling and map sample displacement back to scene space, keeping the refractive edge aligned with the highlight during press/stretch. Segmented-control springs retain their actual target when sleeping; identical held-contact events do not restart motion, and a new press cancels the prior release phase.
+
+Window-space filter geometry is resolved at scene submission rather than only when painting. The glass layer opts out of retained scene reuse so cached navigation subtrees follow ancestor hide/restore transforms. It does not schedule idle frames or run a polling ticker.

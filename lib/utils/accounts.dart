@@ -1,3 +1,5 @@
+import 'package:PiliPlus/services/account_service.dart';
+import 'package:get/get.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/models/common/account_type.dart';
 import 'package:PiliPlus/pages/mine/controller.dart';
@@ -7,6 +9,12 @@ import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:hive_ce/hive.dart';
 
 abstract final class Accounts {
+  static void _notifyRevision() {
+    if (Get.isRegistered<AccountService>()) {
+      Get.find<AccountService>().accountRevision.value++;
+    }
+  }
+
   static late final Box<LoginAccount> account;
   static final List<Account> accountMode = List.filled(
     AccountType.values.length,
@@ -41,6 +49,7 @@ abstract final class Accounts {
         accountMode[t.index] = a;
       }
     }
+    _notifyRevision();
     return Future.wait(
       (accountMode.toSet()..removeWhere((i) => i.activated)).map(
         Request.buvidActive,
@@ -53,6 +62,7 @@ abstract final class Accounts {
     for (int i = 0; i < AccountType.values.length; i++) {
       accountMode[i] = AnonymousAccount();
     }
+    _notifyRevision();
     await AnonymousAccount().delete();
     Request.buvidActive(AnonymousAccount());
   }
@@ -64,6 +74,7 @@ abstract final class Accounts {
         accountMode[i] = AnonymousAccount();
       }
     }
+    _notifyRevision();
     await Future.wait(accounts.map((i) => i.delete()));
     if (isLoginMain && !Accounts.main.isLogin) {
       await LoginUtils.onLogoutMain();
@@ -73,6 +84,7 @@ abstract final class Accounts {
   static Future<void> set(AccountType key, Account account) async {
     final oldAccount = accountMode[key.index]..type.remove(key);
     accountMode[key.index] = account..type.add(key);
+    _notifyRevision();
     await Future.wait([?account.onChange(), ?oldAccount.onChange()]);
     if (!account.activated) await Request.buvidActive(account);
     switch (key) {

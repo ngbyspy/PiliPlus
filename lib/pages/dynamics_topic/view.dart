@@ -140,8 +140,7 @@ class _DynTopicPageState extends State<DynTopicPage>
           ),
         ),
       ),
-      fab: SlideTransition(
-        position: fabAnimation,
+      fab: fabTransition(
         child: Padding(
           padding: .only(
             right: kFloatingActionButtonMargin + padding.right,

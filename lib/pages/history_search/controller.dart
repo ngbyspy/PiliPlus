@@ -6,6 +6,7 @@ import 'package:PiliPlus/models_new/history/list.dart';
 import 'package:PiliPlus/pages/common/multi_select/base.dart';
 import 'package:PiliPlus/pages/common/search/common_search_controller.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:flutter/widgets.dart' show Text;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -25,7 +26,9 @@ class HistorySearchController
     return response.list;
   }
 
-  final account = Accounts.history;
+  Account get account => Accounts.history;
+  @override
+  Object get dataScope => account;
 
   Future<void> onDelHistory(int index, kid, String business) async {
     final res = await UserHttp.delHistory(

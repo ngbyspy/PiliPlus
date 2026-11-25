@@ -30,6 +30,9 @@ mixin BaseFavController
   bool get isOwner;
   int get mediaId;
 
+  @override
+  Object get dataScope => Accounts.main;
+
   ValueChanged<int>? updateCount;
 
   void onViewFav(FavDetailItemModel item, int? index);

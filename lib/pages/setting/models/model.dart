@@ -169,6 +169,27 @@ class NormalModel extends SettingsModel {
   }
 }
 
+class WidgetModel extends SettingsModel {
+  const WidgetModel({
+    required this.title,
+    required this.builder,
+    super.subtitle,
+  });
+
+  @override
+  final String title;
+  final WidgetBuilder builder;
+
+  @override
+  String get effectiveTitle => title;
+
+  @override
+  String? get effectiveSubtitle => subtitle;
+
+  @override
+  Widget get widget => Builder(builder: builder);
+}
+
 class SwitchModel extends SettingsModel {
   @override
   final String? title;

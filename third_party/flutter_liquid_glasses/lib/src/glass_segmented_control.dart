@@ -50,10 +50,12 @@ class GlassSegmentedControl<T> extends StatefulWidget {
     this.selectedColor = const Color(0xFFFFFFFF),
     this.unselectedColor = const Color(0x99FFFFFF),
     this.blurSigma = 2.0,
+    this.surfaceOpacity = 0.4,
     this.height = 36,
     this.inset = 3,
     this.enabled = true,
-  }) : assert(segments.length >= 2);
+  }) : assert(segments.length >= 2),
+       assert(surfaceOpacity >= 0 && surfaceOpacity <= 1);
 
   final List<GlassSegment<T>> segments;
 
@@ -69,6 +71,10 @@ class GlassSegmentedControl<T> extends StatefulWidget {
   /// Backdrop blur behind the track glass (logical px). The thumb is
   /// unblurred, faithful to upstream (indicator has lens only, no blur()).
   final double blurSigma;
+
+  /// Track tint only; labels, blur, refraction and pressed thumb keep their
+  /// original optics and opacity.
+  final double surfaceOpacity;
 
   final double height;
 
@@ -350,7 +356,7 @@ class _GlassSegmentedControlState<T> extends State<GlassSegmentedControl<T>>
       refractionAmount: -24 * hs,
       depthEffect: 1,
       saturation: 1.5,
-      surfaceColor: [mc.r, mc.g, mc.b, 0.4],
+      surfaceColor: [mc.r, mc.g, mc.b, widget.surfaceOpacity],
       highlightAlpha: 0.5,
       highlightStroke: 0.5,
       shadowAlpha: 0.1,

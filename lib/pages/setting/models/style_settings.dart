@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:math' as math;
 
 import 'package:PiliPlus/common/widgets/color_palette.dart';
@@ -147,6 +148,19 @@ List<SettingsModel> get styleSettings => [
     defaultVal: false,
     needReboot: true,
   ),
+  if (Platform.isAndroid && ui.ImageFilter.isShaderFilterSupported)
+    SwitchModel(
+      title: '液态玻璃底栏',
+      subtitle: '按住底栏滑动选择栏目；仅底栏布局生效',
+      leading: const Icon(Icons.blur_on),
+      setKey: SettingBoxKey.androidLiquidGlassNavigation,
+      defaultVal: false,
+      onChanged: (value) {
+        if (Get.isRegistered<MainController>()) {
+          Get.find<MainController>().androidLiquidGlassNavigation.value = value;
+        }
+      },
+    ),
   if (Platform.isIOS)
     SwitchModel(
       title: '液态玻璃底栏',

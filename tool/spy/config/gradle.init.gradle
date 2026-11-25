@@ -43,8 +43,10 @@ allprojects { p ->
             p.repositories.exclusiveContent {
                 forRepository { p.repositories.maven { url = uri(new File(flutterMaven)) } }
                 filter {
-                    includeModule('io.flutter', 'flutter_embedding_release')
-                    includeModule('io.flutter', 'arm64_v8a_release')
+                    ['release', 'profile', 'debug'].each { mode ->
+                        includeModule('io.flutter', "flutter_embedding_${mode}")
+                        includeModule('io.flutter', "arm64_v8a_${mode}")
+                    }
                 }
             }
         }

@@ -60,6 +60,7 @@ class MainController extends GetxController
   final enableMYBar = Pref.enableMYBar;
   final floatingNavBar = Pref.floatingNavBar;
   final iosLiquidGlassNavigation = Pref.iosLiquidGlassNavigation.obs;
+  final androidLiquidGlassNavigation = Pref.androidLiquidGlassNavigation.obs;
   final useSideBar = Pref.useSideBar;
   final hideSideBarLabel = Pref.hideSideBarLabel;
   final mainTabBarView = Pref.mainTabBarView;

@@ -6,6 +6,8 @@ param(
     [string]$OutputRoot,
     [string]$ProxyUrl,
     [switch]$AcceptanceBuild,
+    [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release',
+    [ValidateSet('skia','impeller')][string]$AndroidRenderer = 'skia',
     [switch]$ValidateOnly,
     [switch]$Offline
 )
@@ -17,7 +19,11 @@ if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
-$packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild)
+if ($AndroidBuildMode -ne 'release' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Debug/Profile are explicit Android acceptance diagnostics only' }
+if ($Platform -eq 'Android' -and -not $PSBoundParameters.ContainsKey('AndroidRenderer') -and $context.release.PSObject.Properties['androidRenderer']) { $AndroidRenderer = $context.release.androidRenderer }
+if ($AndroidRenderer -ne 'skia' -and $Platform -ne 'Android') { throw 'Android renderer selection applies only to Android' }
+if ($Platform -eq 'Android' -and -not $AcceptanceBuild -and $context.release.PSObject.Properties['androidRenderer'] -and $AndroidRenderer -cne $context.release.androidRenderer) { throw 'Formal Android renderer must match the accepted release policy' }
+$packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild) $AndroidBuildMode
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
 if ($AcceptanceBuild) {
@@ -34,6 +40,7 @@ $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.comm
 $report.sourceBranch = $context.branch
 $report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
 $report.packageProfile = $packageProfile
+if ($Platform -eq 'Android') { $report.androidRenderer = $AndroidRenderer }
 if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }
 if ($Platform -eq 'Android' -and -not $AcceptanceBuild) { $report.nativeAcceptance = 'installation over the preceding SPY package and mixed-playback acceptance pending' }
 if ($ProxyUrl) {
@@ -81,9 +88,10 @@ try {
     $report.resolvedLockSha256 = Get-SpyHash (Join-Path $context.source 'pubspec.lock')
     $paths = @('lib/features/watchroom','test/watchroom','test/release_identity_test.dart','lib/utils/runtime_identity.dart','lib/common/constants.dart','lib/main.dart','lib/utils/cache_manager.dart','lib/utils/desktop/window_controller.dart','lib/pages/mine/view.dart','lib/utils/app_scheme.dart','lib/pages/video/controller.dart','lib/pages/video/view.dart','lib/pages/video/introduction/pgc/view.dart','lib/pages/video/introduction/pgc/controller.dart','lib/models_new/pgc/pgc_info_model/result.dart','lib/plugin/pl_player/controller.dart','lib/pages/video/widgets/header_control.dart','lib/pages/video/widgets/player_focus.dart','lib/pages/history/view.dart','lib/pages/history/widgets/item.dart')
     $paths += @('lib/services/audio_session.dart','lib/services/playback_audio_session.dart','lib/services/mobile_playback_volume.dart','lib/services/service_locator.dart','lib/models/common/audio_normalization.dart','lib/pages/audio/controller.dart','lib/pages/audio/view.dart','lib/pages/live_room/widgets/header_control.dart','lib/pages/setting/models/model.dart','lib/pages/setting/models/play_settings.dart','lib/pages/setting/view.dart','lib/pages/setting/widgets/mixed_playback_volume_dialog.dart','lib/utils/player_volume.dart','lib/utils/storage.dart','lib/utils/storage_pref.dart','lib/plugin/pl_player/view/view.dart','test/services','test/pages/setting')
-    $paths += @('lib/common/widgets/advanced_materials.dart','lib/common/widgets/g2_shape_border.dart','lib/common/widgets/floating_navigation_bar.dart','lib/common/widgets/scroll_under_toolbar.dart','lib/common/widgets/sliver/sliver_floating_header.dart','lib/common/widgets/refresh_layout.dart','lib/common/widgets/flutter/refresh_indicator.dart','lib/pages/home/view.dart','lib/pages/hot/view.dart','lib/pages/pgc/view.dart','lib/pages/rcmd/view.dart','lib/pages/search_panel/view.dart','lib/pages/search_panel/video/view.dart','lib/pages/search_result/view.dart','lib/pages/setting/pages/color_select.dart','lib/utils/soft_dynamic_colors.dart','lib/utils/theme_utils.dart','lib/utils/extension/core_palettes_ext.dart','lib/utils/share_utils.dart','test/utils')
-    Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + $paths) $context.source
-    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/plugin/pl_player','test/watchroom','test/services','test/pages/setting','test/utils/dynamic_share_test.dart','test/utils/soft_dynamic_colors_test.dart','test/utils/advanced_materials_test.dart','test/release_identity_test.dart') $context.source
+    $paths += @('lib/common/widgets/android_liquid_glass_navigation.dart','lib/common/widgets/advanced_materials.dart','lib/common/widgets/g2_shape_border.dart','lib/common/widgets/floating_navigation_bar.dart','lib/common/widgets/scroll_under_toolbar.dart','lib/common/widgets/sliver/sliver_floating_header.dart','lib/common/widgets/refresh_layout.dart','lib/common/widgets/flutter/refresh_indicator.dart','lib/pages/home/view.dart','lib/pages/hot/view.dart','lib/pages/pgc/view.dart','lib/pages/rcmd/view.dart','lib/pages/search_panel/view.dart','lib/pages/search_panel/video/view.dart','lib/pages/search_result/view.dart','lib/pages/setting/pages/color_select.dart','lib/utils/soft_dynamic_colors.dart','lib/utils/theme_utils.dart','lib/utils/extension/core_palettes_ext.dart','lib/utils/share_utils.dart','test/utils')
+    $paths += @('lib/pages/main/view.dart','lib/pages/main/controller.dart','lib/pages/setting/models/style_settings.dart')
+    Invoke-SpyNative $sdk.executable (@('analyze','--no-pub','--no-fatal-infos') + ($paths | Select-Object -Unique)) $context.source
+    Invoke-SpyNative $sdk.executable @('test','--no-pub','test/watchroom','test/services','test/pages/setting','test/common/widgets','test/plugin/pl_player','test/utils/dynamic_share_test.dart','test/utils/soft_dynamic_colors_test.dart','test/utils/advanced_materials_test.dart','test/release_identity_test.dart') $context.source
     $report.validation = @{analysis=$true;tests=$true}
     if ($ValidateOnly) { $report.configuration='validation-only'; Write-SpyJson $report $reportPath; return }
     $defines = Join-Path $context.source '.spy-build/release-defines.json'
@@ -111,7 +119,7 @@ try {
         }
         'Android' {
             $report.nativeLibraries = @(Prepare-SpyAndroidNativeLibraries $context)
-            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk -DebugBuild:$AcceptanceBuild)
+            $report.flutterArtifacts = @(Prepare-SpyAndroidFlutterArtifacts $context $sdk -BuildMode $packageProfile.mode)
             if (-not $AcceptanceBuild) {
             $secrets = Join-Path (Split-Path -Parent $context.source) '.secrets'
             $identity = Get-Content -LiteralPath (Join-Path $secrets 'android-signing.json') -Raw | ConvertFrom-Json
@@ -128,11 +136,17 @@ try {
             $env:GRADLE_USER_HOME=Join-Path $context.cache 'gradle'
             New-Item -ItemType Directory -Path (Join-Path $env:GRADLE_USER_HOME 'init.d') -Force | Out-Null
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config/gradle.init.gradle') -Destination (Join-Path $env:GRADLE_USER_HOME 'init.d/spy-mirrors.gradle') -Force
-            Invoke-SpyNative $sdk.executable (@('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true') + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
+            $androidArguments = @('build','apk','--target-platform','android-arm64','--android-project-arg=kotlin.incremental=false','--android-project-arg=disable-abi-filtering=true')
+            if ($AcceptanceBuild) { $androidArguments += '--android-project-arg=spyAcceptance=true' }
+            $impellerFlag = ($AndroidRenderer -eq 'impeller').ToString().ToLowerInvariant()
+            $androidArguments += "--android-project-arg=spyImpeller=$impellerFlag"
+            Invoke-SpyNative $sdk.executable ($androidArguments + $common + @('--build-number',"$($context.release.androidPackageVersionCode)")) $context.source
             $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
+            $apkIdentity['impellerEnabled'] = Get-SpyAndroidImpeller $builtApk $androidTools
+            if ($apkIdentity.impellerEnabled -ne ($AndroidRenderer -eq 'impeller')) { throw 'APK renderer metadata differs from the selected renderer' }
             if ($AcceptanceBuild) {
-                if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or -not $apkIdentity.debuggable -or $apkIdentity.displayName -cne $packageProfile.displayName) { throw 'Acceptance APK must be a separately installed, debuggable SPY application' }
+                if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or $apkIdentity.debuggable -ne ($packageProfile.mode -eq 'debug') -or $apkIdentity.displayName -cne $packageProfile.displayName -or $apkIdentity.certificateSha256 -ceq $context.release.androidCertificateSha256) { throw 'Acceptance APK identity, build mode or separate signing lineage is incorrect' }
                 $apkIdentity['updatesPreviousSpy'] = $false
             } else {
                 if ($apkIdentity.applicationId -cne $context.release.androidApplicationId -or $apkIdentity.certificateSha256 -cne $previousApk.certificateSha256 -or $apkIdentity.versionCode -ne $context.release.androidPackageVersionCode -or $apkIdentity.versionCode -le $previousApk.versionCode -or $apkIdentity.displayName -cne $context.release.androidDisplayName -or $apkIdentity.debuggable) { throw 'Built APK cannot update the preceding SPY package with the requested identity' }
@@ -144,6 +158,10 @@ try {
                 $abis = @($archive.Entries | Where-Object FullName -Like 'lib/*/*.so' | ForEach-Object { ($_.FullName -split '/')[1] } | Sort-Object -Unique)
                 if ($abis.Count -ne 1 -or $abis[0] -cne 'arm64-v8a') { throw 'Release APK advertises unsupported native architectures' }
                 $report.architectures = $abis
+                $hasKernel = $null -ne $archive.GetEntry('assets/flutter_assets/kernel_blob.bin')
+                $hasAot = $null -ne $archive.GetEntry('lib/arm64-v8a/libapp.so')
+                if (($packageProfile.mode -eq 'debug' -and -not $hasKernel) -or ($packageProfile.mode -ne 'debug' -and ($hasKernel -or -not $hasAot))) { throw 'APK payload does not match the selected Debug versus AOT build mode' }
+                $report.androidPayload = @{mode=$packageProfile.mode;hasDebugKernel=$hasKernel;hasAotApplication=$hasAot}
             } finally { $archive.Dispose() }
             $artifact = Join-Path $OutputRoot "PiliPlus-SPY-$packageBuildId-android-arm64-$($packageProfile.mode).apk"
             if (Test-Path -LiteralPath $artifact) { throw 'Preserve the existing package; use a new release revision' }

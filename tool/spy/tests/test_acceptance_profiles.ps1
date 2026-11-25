@@ -2,7 +2,14 @@
 $source = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $release = Get-Content -LiteralPath (Join-Path $source 'tool/spy/release.json') -Raw | ConvertFrom-Json
 $android = Get-SpyPackageProfile $release Android $true
-if ($android.mode -cne 'debug' -or $android.applicationId -cne 'com.ngbyspy.piliplus.spy.debug' -or $android.applicationId -in @($release.androidApplicationId,'com.example.piliplus')) { throw 'Android acceptance could replace a formal installation' }
+if ($android.mode -cne 'release' -or $android.displayName -cne 'PiliPlus SPY dev' -or $android.applicationId -cne 'com.ngbyspy.piliplus.spy.debug' -or $android.applicationId -in @($release.androidApplicationId,'com.example.piliplus')) { throw 'Android acceptance must be independent and default to Release' }
+foreach ($mode in @('debug','profile')) {
+    $diagnostic = Get-SpyPackageProfile $release Android $true $mode
+    if ($diagnostic.mode -cne $mode -or $diagnostic.applicationId -cne $android.applicationId) { throw 'Explicit diagnostic mode must preserve the acceptance app identity' }
+    $rejected = $false
+    try { Get-SpyPackageProfile $release Android $false $mode | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Formal Android builds must reject Debug/Profile mode' }
+}
 $ios = Get-SpyPackageProfile $release iOS $true
 if ($ios.applicationId -cne 'com.spy.piliPlus.dev' -or $ios.displayName -cne 'PiliPlus SPY Dev') { throw 'iOS acceptance identity/name has incorrect spelling or case' }
 $formalIos = Get-SpyPackageProfile $release iOS $false

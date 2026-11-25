@@ -20,7 +20,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 2.2.1+1
 
 environment:
-  sdk: ">=3.13.0"
+  sdk: ">=3.13.3"
   flutter: 3.47.9
 
 # Dependencies specify other packages that your package needs in order to work.
@@ -92,6 +92,8 @@ dependencies:
   fixnum: ^1.1.1
   fl_chart: ^1.0.0
   flex_seed_scheme: ^5.0.0
+  flutter_liquid_glasses:
+    path: third_party/flutter_liquid_glasses
   flutter_displaymode: ^0.7.0
   flutter_html:
     git:

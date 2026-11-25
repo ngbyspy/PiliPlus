@@ -85,10 +85,20 @@ function Get-SpyAndroidApkIdentity([string]$Path, $Tools) {
     }
 }
 
-function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance) {
+function Get-SpyAndroidImpeller([string]$Path, $Tools) {
+    $manifest = & $Tools.aapt dump xmltree $Path AndroidManifest.xml
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect APK renderer metadata' }
+    $pattern = '(?i)"io\.flutter\.embedding\.android\.EnableImpeller"[^\r\n]*\r?\n\s*A: android:value[^\r\n]*\(type 0x12\)0x([0-9a-f]+)'
+    $matches = [regex]::Matches(($manifest -join "`n"), $pattern)
+    if ($matches.Count -ne 1 -or $matches[0].Groups[1].Value -notin @('0','ffffffff')) { throw 'APK must declare one boolean Impeller setting' }
+    $matches[0].Groups[1].Value -ieq 'ffffffff'
+}
+
+function Get-SpyPackageProfile($Release, [string]$Platform, [bool]$Acceptance, [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release') {
     switch ($Platform) {
         'Android' {
-            @{mode=$(if ($Acceptance) { 'debug' } else { 'release' });applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { 'PiliPlus SPY debug' } else { $Release.androidDisplayName })}
+            if (-not $Acceptance -and $AndroidBuildMode -ne 'release') { throw 'Formal Android packages require Release mode' }
+            @{mode=$AndroidBuildMode;applicationId=$Release.androidApplicationId + $(if ($Acceptance) { '.debug' } else { '' });displayName=$(if ($Acceptance) { if ($AndroidBuildMode -eq 'debug') { 'PiliPlus SPY debug' } else { 'PiliPlus SPY dev' } } else { $Release.androidDisplayName })}
         }
         'iOS' {
             @{mode='release';applicationId=$(if ($Acceptance) { $Release.iosDevelopmentBundleId } else { $Release.iosBundleId });displayName=$(if ($Acceptance) { 'PiliPlus SPY Dev' } else { 'PiliPlus' })}
@@ -329,14 +339,14 @@ function Prepare-SpyAndroidNativeLibraries($Context) {
     $reports
 }
 
-function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [switch]$DebugBuild) {
+function Prepare-SpyAndroidFlutterArtifacts($Context, $Sdk, [ValidateSet('release','debug','profile')][string]$BuildMode = 'release') {
     $engine = Get-SpyGit $Sdk.root @('show',"$($Sdk.commit):bin/internal/engine.version")
     if ($engine -notmatch '^[0-9a-f]{40}$' -or [IO.File]::ReadAllText((Join-Path $Sdk.root 'bin/internal/engine.version')).Trim() -cne $engine) { throw 'Flutter engine revision changed' }
     $version = "1.0.0-$engine"
     $root = Join-Path $Context.cache 'spy/flutter-maven'
     $reports = @()
     $python = if ($IsWindows) { 'python' } else { 'python3' }
-    $mode = if ($DebugBuild) { 'debug' } else { 'release' }
+    $mode = $BuildMode
     foreach ($module in @("flutter_embedding_$mode","arm64_v8a_$mode")) {
         foreach ($extension in @('pom','jar')) {
             $relative = "io/flutter/$module/$version/$module-$version.$extension"

@@ -20,7 +20,9 @@ $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
 if ($AndroidBuildMode -ne 'release' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Debug/Profile are explicit Android acceptance diagnostics only' }
-if ($AndroidRenderer -ne 'skia' -and ($Platform -ne 'Android' -or -not $AcceptanceBuild)) { throw 'Impeller is an explicit Android acceptance experiment only' }
+if ($Platform -eq 'Android' -and -not $PSBoundParameters.ContainsKey('AndroidRenderer') -and $context.release.PSObject.Properties['androidRenderer']) { $AndroidRenderer = $context.release.androidRenderer }
+if ($AndroidRenderer -ne 'skia' -and $Platform -ne 'Android') { throw 'Android renderer selection applies only to Android' }
+if ($Platform -eq 'Android' -and -not $AcceptanceBuild -and $context.release.PSObject.Properties['androidRenderer'] -and $AndroidRenderer -cne $context.release.androidRenderer) { throw 'Formal Android renderer must match the accepted release policy' }
 $packageProfile = Get-SpyPackageProfile $context.release $Platform ([bool]$AcceptanceBuild) $AndroidBuildMode
 $registerLocalRelease = -not $OutputRoot -and -not $ValidateOnly -and -not $AcceptanceBuild
 $packageBuildId = $context.release.displayVersion
@@ -142,7 +144,7 @@ try {
             $builtApk = Join-Path $context.source "build/app/outputs/flutter-apk/app-$($packageProfile.mode).apk"
             $apkIdentity = Get-SpyAndroidApkIdentity $builtApk $androidTools
             $apkIdentity['impellerEnabled'] = Get-SpyAndroidImpeller $builtApk $androidTools
-            if ($apkIdentity.impellerEnabled -ne ($AndroidRenderer -eq 'impeller')) { throw 'APK renderer metadata differs from the selected experiment renderer' }
+            if ($apkIdentity.impellerEnabled -ne ($AndroidRenderer -eq 'impeller')) { throw 'APK renderer metadata differs from the selected renderer' }
             if ($AcceptanceBuild) {
                 if ($apkIdentity.applicationId -cne $packageProfile.applicationId -or $apkIdentity.applicationId -in @($context.release.androidApplicationId,'com.example.piliplus') -or $apkIdentity.debuggable -ne ($packageProfile.mode -eq 'debug') -or $apkIdentity.displayName -cne $packageProfile.displayName -or $apkIdentity.certificateSha256 -ceq $context.release.androidCertificateSha256) { throw 'Acceptance APK identity, build mode or separate signing lineage is incorrect' }
                 $apkIdentity['updatesPreviousSpy'] = $false

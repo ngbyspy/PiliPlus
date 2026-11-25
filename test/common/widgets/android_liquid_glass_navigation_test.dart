@@ -36,13 +36,14 @@ void main() {
     WidgetTester tester,
     List<String> selected, {
     int index = 0,
+    bool reduceTransparency = true,
   }) => tester.pumpWidget(
     MaterialApp(
       home: Center(
         child: SizedBox(
           width: 320,
           child: ReducedTransparencyScope(
-            reduceTransparency: true,
+            reduceTransparency: reduceTransparency,
             child: GlassSegmentedControl<String>(
               height: 64,
               segments: const [
@@ -122,11 +123,32 @@ void main() {
       );
       await tester.pumpAndSettle();
       // Software tests use the documented blur fallback. An opaque accessibility
-      // branch removes both backdrop filters and obscures the selected label.
-      expect(find.byType(BackdropFilter), findsNWidgets(2));
+      // branch removes the track filter and obscures the selected label.
+      expect(find.byType(BackdropFilter), findsOneWidget);
       expect(find.bySemanticsLabel('首页'), findsOneWidget);
       expect(find.bySemanticsLabel('我的'), findsOneWidget);
       semantics.dispose();
+    },
+  );
+  testWidgets(
+    'idle thumb avoids backdrop work and press restores real filter',
+    (tester) async {
+      final selected = <String>[];
+      await control(tester, selected, reduceTransparency: false);
+      await tester.pumpAndSettle();
+      expect(find.byType(BackdropFilter), findsOneWidget);
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('我的:on')),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(find.byType(BackdropFilter), findsNWidgets(2));
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(selected, isEmpty);
+      expect(tester.binding.transientCallbackCount, 0);
     },
   );
 }

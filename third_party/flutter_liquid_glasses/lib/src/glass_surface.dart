@@ -164,6 +164,28 @@ class _GlassSurfaceState extends State<GlassSurface> {
   }
 
   Widget _buildSurface(BuildContext context) {
+    final logicalParams = widget.params;
+    // With neutral optics the filtered input is unchanged. Paint only the
+    // translucent surface instead of copying and filtering the backdrop. The
+    // program stays loaded so pressing the thumb can immediately use its lens.
+    final neutralOptics =
+        widget.blurSigma == 0 &&
+        logicalParams.refractionHeight *
+                MediaQuery.devicePixelRatioOf(context) <=
+            0.5 &&
+        logicalParams.saturation == 1 &&
+        logicalParams.brightness == 0 &&
+        logicalParams.contrast == 1 &&
+        logicalParams.glowAlpha <= 0.001;
+    if (neutralOptics && !(kProfileMode && GlassDebugProbe.mode.value > 0)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(logicalParams.cornerRadius),
+        child: CustomPaint(
+          painter: _GlassFallbackTintPainter(logicalParams),
+          child: widget.child ?? const SizedBox.expand(),
+        ),
+      );
+    }
     final program = _program;
     if (program == null || !_shaderSupported) {
       return _fallback();

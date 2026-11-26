@@ -75,6 +75,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val dark: Boolean, val tint: Int, val foreground: Int, val opacity: Float,
         val blurRadius: Float,
         val buttonOpacity: Float, val buttonBlurRadius: Float,
+        val surfaceTint: String, val buttonTint: String,
         val fontScale: Float, val visible: Boolean, val fallback: Boolean
     )
 
@@ -202,6 +203,8 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             n("blurRadius", 8f).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
             n("buttonOpacity", .1f).let { if (it.isFinite()) it.coerceIn(0f, 1f) else .1f },
             n("buttonBlurRadius", 16f).let { if (it.isFinite()) it.coerceIn(0f, 32f) else 16f },
+            args["surfaceTint"] as? String ?: "automatic",
+            args["buttonTint"] as? String ?: "automatic",
             n("fontScale", 1f), args["visible"] == true, args["fallback"] == true
         )
         if (awaitingCleanScene && !next.fallback &&
@@ -478,6 +481,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
                         .size((c.width / density).dp, 64.dp),
                     surfaceOpacity = c.opacity, blurRadius = c.blurRadius,
                     buttonOpacity = c.buttonOpacity, buttonBlurRadius = c.buttonBlurRadius,
+                    surfaceTint = c.surfaceTint, buttonTint = c.buttonTint,
                     darkTheme = c.dark, accent = Color(c.tint)
                 ) {
                     c.items.forEachIndexed { index, item ->

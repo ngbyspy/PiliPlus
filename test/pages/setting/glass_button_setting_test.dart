@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 void main() {
   late Directory storage;
   var barClarity = .6, barBlur = .5, buttonClarity = .9, buttonBlur = .5;
+  var barTint = GlassTint.automatic, buttonTint = GlassTint.automatic;
   final barChanges = <double>[];
   setUpAll(() async {
     storage = await Directory.systemTemp.createTemp(
@@ -26,6 +27,8 @@ void main() {
     barBlur = .5;
     buttonClarity = .9;
     buttonBlur = .5;
+    barTint = GlassTint.automatic;
+    buttonTint = GlassTint.automatic;
     barChanges.clear();
   });
   tearDownAll(() async {
@@ -44,6 +47,10 @@ void main() {
                   key: const ValueKey('bar'),
                   value: barClarity,
                   blurValue: barBlur,
+                  tint: barTint,
+                  onTintChanged: (v) {
+                    barTint = v;
+                  },
                   onChanged: barChanges.add,
                   onSaved: (v) => barClarity = v,
                   onBlurChanged: barChanges.add,
@@ -54,6 +61,10 @@ void main() {
                   isButton: true,
                   value: buttonClarity,
                   blurValue: buttonBlur,
+                  tint: buttonTint,
+                  onTintChanged: (v) {
+                    buttonTint = v;
+                  },
                   onChanged: (_) {},
                   onSaved: (v) => buttonClarity = v,
                   onBlurChanged: (_) {},
@@ -91,6 +102,54 @@ void main() {
     expect(GlassAppearance.buttonSurfaceOpacity(1), 0);
     expect(GlassAppearance.nativeButtonBlurRadius(0), 0);
     expect(GlassAppearance.nativeButtonBlurRadius(1), 32);
+  });
+
+  test('tint preferences are independent and old/invalid values keep automatic colors', () async {
+    expect(Pref.androidGlassTint, GlassTint.automatic);
+    expect(Pref.androidGlassButtonTint, GlassTint.automatic);
+    await GStorage.setting.put(SettingBoxKey.androidGlassTint, 'white');
+    await GStorage.setting.put(SettingBoxKey.androidGlassButtonTint, 'black');
+    expect(Pref.androidGlassTint, GlassTint.white);
+    expect(Pref.androidGlassButtonTint, GlassTint.black);
+    expect(Pref.androidGlassClarity, .6);
+    expect(Pref.androidGlassButtonClarity, .9);
+    for (final invalid in [null, 2, 'missing']) {
+      expect(GlassTint.fromPreference(invalid), GlassTint.automatic);
+    }
+  });
+
+  testWidgets('selecting bases saves separately and survives reopening', (
+    tester,
+  ) async {
+    await showSettings(tester);
+    final bar = find.byKey(const ValueKey('glass-bar-tint'));
+    final button = find.byKey(const ValueKey('glass-button-tint'));
+    await tester.ensureVisible(bar);
+    await tester.tap(bar);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('白色').last);
+    await tester.pumpAndSettle();
+    expect(barTint, GlassTint.white);
+    expect(buttonTint, GlassTint.automatic);
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('黑色').last);
+    await tester.pumpAndSettle();
+    expect(buttonTint, GlassTint.black);
+    expect(barChanges, isEmpty);
+    expect([barClarity, barBlur, buttonClarity, buttonBlur], [.6, .5, .9, .5]);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await showSettings(tester);
+    expect(
+      tester.widget<DropdownButton<GlassTint>>(bar).value,
+      GlassTint.white,
+    );
+    expect(
+      tester.widget<DropdownButton<GlassTint>>(button).value,
+      GlassTint.black,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(

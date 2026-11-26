@@ -167,6 +167,13 @@ List<SettingsModel> get styleSettings => [
       title: '底栏玻璃材质',
       builder: (_) => GlassClaritySetting(
         key: const ValueKey('bar-glass-setting'),
+        tint: Pref.androidGlassTint,
+        onTintChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassTint.value = value;
+          }
+          GStorage.setting.put(SettingBoxKey.androidGlassTint, value.name);
+        },
         value: Pref.androidGlassClarity,
         blurValue: Pref.androidGlassBlur,
         onBlurChanged: (value) {
@@ -194,6 +201,16 @@ List<SettingsModel> get styleSettings => [
       title: '按钮玻璃材质（原生）',
       builder: (_) => GlassClaritySetting(
         key: const ValueKey('button-glass-setting'),
+        tint: Pref.androidGlassButtonTint,
+        onTintChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassButtonTint.value = value;
+          }
+          GStorage.setting.put(
+            SettingBoxKey.androidGlassButtonTint,
+            value.name,
+          );
+        },
         isButton: true,
         value: Pref.androidGlassButtonClarity,
         blurValue: Pref.androidGlassButtonBlur,

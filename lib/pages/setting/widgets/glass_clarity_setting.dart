@@ -12,6 +12,8 @@ class GlassClaritySetting extends StatefulWidget {
     this.onBlurChanged,
     this.onBlurSaved,
     this.isButton = false,
+    this.tint = GlassTint.automatic,
+    this.onTintChanged,
   });
 
   final double value;
@@ -21,6 +23,8 @@ class GlassClaritySetting extends StatefulWidget {
   final ValueChanged<double>? onBlurChanged;
   final ValueChanged<double>? onBlurSaved;
   final bool isButton;
+  final GlassTint tint;
+  final ValueChanged<GlassTint>? onTintChanged;
 
   @override
   State<GlassClaritySetting> createState() => _GlassClaritySettingState();
@@ -39,6 +43,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
   bool _dirty = false;
   late double _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
   bool _blurDirty = false;
+  late GlassTint _tint = widget.tint;
 
   void _changeBlur(double value) {
     final normalized = GlassAppearance.normalizeBlur(value);
@@ -77,6 +82,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
     if (oldWidget.blurValue != widget.blurValue && !_blurDirty) {
       _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
     }
+    if (oldWidget.tint != widget.tint) _tint = widget.tint;
   }
 
   void _reset() {
@@ -101,6 +107,34 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.onTintChanged != null) ...[
+            Row(
+              children: [
+                Expanded(child: Text(widget.isButton ? '按钮底色' : '底栏底色')),
+                DropdownButton<GlassTint>(
+                  key: ValueKey(
+                    widget.isButton ? 'glass-button-tint' : 'glass-bar-tint',
+                  ),
+                  value: _tint,
+                  items: [
+                    for (final tint in GlassTint.values)
+                      DropdownMenuItem(value: tint, child: Text(tint.label)),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _tint = value);
+                    widget.onTintChanged!(value);
+                  },
+                ),
+              ],
+            ),
+            Text(
+              widget.isButton
+                  ? '仅原生底栏生效。自动：浅色主题用黑底，深色主题用白底。按住时按钮底色消退。'
+                  : '底色选择仅原生底栏生效。自动：浅色主题用白底，深色主题用黑底。',
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Icon(Icons.opacity, color: colors.onSurfaceVariant),

@@ -1,4 +1,5 @@
 import 'package:PiliPlus/common/widgets/native_kyant_navigation.dart';
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,6 +13,8 @@ void main() {
   var clarity = .6;
   var buttonClarity = .9;
   var buttonBlur = .5;
+  var tint = GlassTint.automatic;
+  var buttonTint = GlassTint.automatic;
   setUp(() {
     WidgetsBinding.instance.handleAppLifecycleStateChanged(
       AppLifecycleState.resumed,
@@ -21,6 +24,8 @@ void main() {
     clarity = .6;
     buttonClarity = .9;
     buttonBlur = .5;
+    tint = GlassTint.automatic;
+    buttonTint = GlassTint.automatic;
     calls.clear();
     selections.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -46,6 +51,8 @@ void main() {
     blur: blur,
     buttonClarity: buttonClarity,
     buttonBlur: buttonBlur,
+    tint: tint,
+    buttonTint: buttonTint,
   );
   Widget host(Widget child) => MaterialApp(
     navigatorObservers: [KyantNavigationRoutes.instance],
@@ -94,6 +101,8 @@ void main() {
       expect(config['blurRadius'], 8);
       expect(config['buttonOpacity'], closeTo(.1, .0001));
       expect(config['buttonBlurRadius'], 16);
+      expect(config['surfaceTint'], 'automatic');
+      expect(config['buttonTint'], 'automatic');
       expect(find.text('original navigation'), findsNothing);
       await emit({'owner': -1, 'id': 'home'});
       expect(selections, isEmpty);
@@ -151,6 +160,29 @@ void main() {
     expect(config()['blurRadius'], 16);
     expect(config()['opacity'], closeTo(.4, .0001));
     expect(selections, isEmpty);
+    await close(tester);
+  });
+
+  testWidgets('independent black/white bases do not change blur or clarity', (
+    tester,
+  ) async {
+    tint = GlassTint.white;
+    buttonTint = GlassTint.black;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    Map config() =>
+        calls.lastWhere((c) => c.method == 'update').arguments as Map;
+    expect(config()['surfaceTint'], 'white');
+    expect(config()['buttonTint'], 'black');
+    buttonTint = GlassTint.white;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['surfaceTint'], 'white');
+    expect(config()['buttonTint'], 'white');
+    expect(config()['opacity'], closeTo(.4, .0001));
+    expect(config()['buttonOpacity'], closeTo(.1, .0001));
+    expect(config()['blurRadius'], 8);
+    expect(config()['buttonBlurRadius'], 16);
     await close(tester);
   });
 

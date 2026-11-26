@@ -1,3 +1,15 @@
+enum GlassTint {
+  automatic('自动'),
+  white('白色'),
+  black('黑色');
+
+  const GlassTint(this.label);
+  final String label;
+
+  static GlassTint fromPreference(Object? value) =>
+      values.where((tint) => tint.name == value).firstOrNull ?? automatic;
+}
+
 abstract final class GlassAppearance {
   // Retain the accepted 0.4 track tint when no preference has been saved.
   static const defaultClarity = 0.6;

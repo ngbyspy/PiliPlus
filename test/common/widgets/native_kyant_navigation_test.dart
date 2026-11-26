@@ -8,8 +8,10 @@ void main() {
   final calls = <MethodCall>[];
   final selections = <int>[];
   var supported = true;
+  var blur = .5;
   setUp(() {
     supported = true;
+    blur = .5;
     calls.clear();
     selections.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -32,6 +34,7 @@ void main() {
     onSelected: selections.add,
     fallback: const Text('original navigation'),
     clarity: .6,
+    blur: blur,
   );
   Widget host(Widget child) => MaterialApp(
     navigatorObservers: [KyantNavigationRoutes.instance],
@@ -74,6 +77,7 @@ void main() {
       expect((config['items'] as List).map((e) => e['id']), ['mine', 'home']);
       expect((config['items'] as List)[1]['badge'], '3');
       expect(config['opacity'], closeTo(.4, .0001));
+      expect(config['blurRadius'], 8);
       expect(find.text('original navigation'), findsNothing);
       await emit({'owner': -1, 'id': 'home'});
       expect(selections, isEmpty);
@@ -113,6 +117,25 @@ void main() {
     expect(tester.binding.transientCallbackCount, 0);
     await close(tester);
     offset.dispose();
+  });
+
+  testWidgets('native blur can be disabled and raised without changing tint', (
+    tester,
+  ) async {
+    blur = 0;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    Map config() =>
+        calls.lastWhere((c) => c.method == 'update').arguments as Map;
+    expect(config()['blurRadius'], 0);
+    expect(config()['opacity'], closeTo(.4, .0001));
+    blur = 1;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['blurRadius'], 16);
+    expect(config()['opacity'], closeTo(.4, .0001));
+    expect(selections, isEmpty);
+    await close(tester);
   });
 
   testWidgets('popup routes hide the native sibling then restore it', (

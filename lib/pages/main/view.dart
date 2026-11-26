@@ -218,11 +218,13 @@ class _MainAppState extends PopScopeState<MainApp>
             final count = _mainController.dynCount.value;
             return NativeKyantNavigationBar(
               clarity: _mainController.androidGlassClarity.value,
+              blur: _mainController.androidGlassBlur.value,
               selectedIndex: _mainController.selectedIndex.value,
               onSelected: _mainController.setIndex,
               fallback: _mainController.androidLiquidGlassNavigation.value
                   ? AndroidLiquidGlassNavigationBar(
                       clarity: _mainController.androidGlassClarity.value,
+                      blur: _mainController.androidGlassBlur.value,
                       selectedIndex: _mainController.selectedIndex.value,
                       onSelected: _mainController.setIndex,
                       fallback: fallback,
@@ -264,6 +266,7 @@ class _MainAppState extends PopScopeState<MainApp>
           }
           return AndroidLiquidGlassNavigationBar(
             clarity: _mainController.androidGlassClarity.value,
+            blur: _mainController.androidGlassBlur.value,
             selectedIndex: _mainController.selectedIndex.value,
             onSelected: _mainController.setIndex,
             fallback: fallback,

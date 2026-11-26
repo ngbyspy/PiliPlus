@@ -70,6 +70,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val owner: Long, val left: Float, val top: Float, val width: Float,
         val height: Float, val dpr: Float, val selected: Int, val items: List<Item>,
         val dark: Boolean, val tint: Int, val foreground: Int, val opacity: Float,
+        val blurRadius: Float,
         val fontScale: Float, val visible: Boolean
     )
 
@@ -149,6 +150,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             (args["selected"] as? Number)?.toInt()?.coerceIn(0, items.lastIndex) ?: 0,
             items, args["dark"] == true, (args["tint"] as Number).toInt(),
             (args["foreground"] as Number).toInt(), n("opacity", .4f).coerceIn(0f, 1f),
+            n("blurRadius", 8f).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
             n("fontScale", 1f), args["visible"] == true
         )
         if (next.width <= 0 || next.height <= 0) { hide(); return }
@@ -338,7 +340,8 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
                     tabsCount = c.items.size,
                     modifier = Modifier.offset { IntOffset(barX.roundToInt(), barY.roundToInt()) }
                         .size((c.width / density).dp, 64.dp),
-                    surfaceOpacity = c.opacity, darkTheme = c.dark, accent = Color(c.tint)
+                    surfaceOpacity = c.opacity, blurRadius = c.blurRadius,
+                    darkTheme = c.dark, accent = Color(c.tint)
                 ) {
                     c.items.forEachIndexed { index, item ->
                         LiquidBottomTab(onClick = { emitSelection(index) }) {

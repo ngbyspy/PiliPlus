@@ -167,6 +167,16 @@ List<SettingsModel> get styleSettings => [
       title: '玻璃通透程度',
       builder: (_) => GlassClaritySetting(
         value: Pref.androidGlassClarity,
+        blurValue: Pref.androidGlassBlur,
+        onBlurChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassBlur.value = value;
+          }
+        },
+        onBlurSaved: (value) => GStorage.setting.put(
+          SettingBoxKey.androidGlassBlur,
+          value,
+        ),
         onChanged: (value) {
           if (Get.isRegistered<MainController>()) {
             Get.find<MainController>().androidGlassClarity.value = value;

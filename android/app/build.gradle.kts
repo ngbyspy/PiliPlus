@@ -78,7 +78,7 @@ android {
 
     buildTypes {
         all {
-            resValue("bool", "spy_native_kyant", spyAcceptance.toString())
+            resValue("bool", "spy_native_kyant", "true")
             signingConfig = if (spyAcceptance) signingConfigs["debug"] else config ?: signingConfigs["debug"]
         }
         release {
@@ -148,7 +148,7 @@ flutter {
     source = "../.."
 }
 
-// Experimental only on spy/dev. The preserved Flutter renderer remains in use.
+// Accepted optional native bar; the preserved Flutter renderer stays in use.
 dependencies {
     implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("io.github.kyant0:shapes:1.2.1")

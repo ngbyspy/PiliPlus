@@ -29,6 +29,7 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
     required this.onSelected,
     required this.fallback,
     this.clarity = GlassAppearance.defaultClarity,
+    this.blur = GlassAppearance.defaultBlur,
   });
 
   final List<AndroidGlassDestination> destinations;
@@ -36,6 +37,7 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final Widget fallback;
   final double clarity;
+  final double blur;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +73,7 @@ class AndroidLiquidGlassNavigationBar extends StatelessWidget {
               child: GlassSegmentedControl<String>(
                 height: 64,
                 inset: 4,
-                blurSigma: 2,
+                blurSigma: GlassAppearance.flutterBlurSigma(blur),
                 surfaceOpacity: GlassAppearance.surfaceOpacity(clarity),
                 segments: destinations
                     .map(

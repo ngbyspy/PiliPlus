@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -43,6 +45,7 @@ class NativeKyantNavigationBar extends StatefulWidget {
     required this.onSelected,
     required this.fallback,
     required this.clarity,
+    this.blur = GlassAppearance.defaultBlur,
   });
   static const channelName = 'com.ngbyspy.piliplus/kyant_navigation';
   final List<KyantDestination> items;
@@ -50,6 +53,7 @@ class NativeKyantNavigationBar extends StatefulWidget {
   final ValueChanged<int> onSelected;
   final Widget fallback;
   final double clarity;
+  final double blur;
   @override
   State<NativeKyantNavigationBar> createState() =>
       _NativeKyantNavigationBarState();
@@ -161,6 +165,7 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
       'tint': colors.primary.toARGB32(),
       'foreground': colors.onSurface.toARGB32(),
       'opacity': 1 - widget.clarity.clamp(0.0, 1.0),
+      'blurRadius': GlassAppearance.nativeBlurRadius(widget.blur),
       'fontScale': MediaQuery.textScalerOf(context).scale(12) / 12,
       'visible': true,
     };

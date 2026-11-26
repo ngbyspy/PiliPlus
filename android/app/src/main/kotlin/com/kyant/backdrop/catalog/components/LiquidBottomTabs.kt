@@ -66,6 +66,7 @@ fun LiquidBottomTabs(
     tabsCount: Int,
     modifier: Modifier = Modifier,
     surfaceOpacity: Float = 0.4f,
+    blurRadius: Float = 8f,
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
     onTabReselected: ((Int) -> Unit)? = null,
@@ -186,7 +187,7 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(8f.dp.toPx())
+                        if (blurRadius > 0f) blur(blurRadius.dp.toPx())
                         lens(24f.dp.toPx(), 24f.dp.toPx())
                     },
                     layerBlock = {
@@ -224,7 +225,7 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            blur(8f.dp.toPx())
+                            if (blurRadius > 0f) blur(blurRadius.dp.toPx())
                             lens(
                                 24f.dp.toPx() * progress,
                                 24f.dp.toPx() * progress

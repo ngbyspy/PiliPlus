@@ -40,16 +40,6 @@ class MainController extends GetxController
   late dynamic controller;
   final RxInt selectedIndex = 0.obs;
 
-  final bottomNavVisibility = ValueNotifier<double?>(null);
-  final bottomBarSettling = false.obs;
-
-  void restoreBars() {
-    bottomBarSettling.value = true;
-    barOffset?.value = 0;
-    showBottomBar?.value = true;
-    setSearchBar();
-  }
-
   final RxInt dynCount = 0.obs;
   late DynamicBadgeMode dynamicBadgeMode;
   late bool checkDynamic = Pref.checkDynamic;
@@ -307,7 +297,6 @@ class MainController extends GetxController
     final currentNav = navigationBars[value];
     if (value != selectedIndex.value) {
       selectedIndex.value = value;
-      restoreBars();
       if (mainTabBarView) {
         controller.animateTo(value);
       } else {
@@ -360,7 +349,6 @@ class MainController extends GetxController
 
   @override
   void onClose() {
-    bottomNavVisibility.dispose();
     barOffset?.close();
     controller.dispose();
     super.onClose();

@@ -8,19 +8,23 @@ class ScrollLinkedNavigation extends StatelessWidget {
     required this.offset,
     required this.child,
     this.animate = true,
+    this.duration = const Duration(milliseconds: 500),
+    this.curve = Curves.easeInOutCubicEmphasized,
     this.onVisibilityChanged,
   });
   final double offset;
   final Widget child;
   final bool animate;
+  final Duration duration;
+  final Curve curve;
   final ValueChanged<double>? onVisibilityChanged;
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
     tween: Tween(begin: offset, end: offset),
     duration: animate && !MediaQuery.disableAnimationsOf(context)
-        ? ScrollVisibility.duration
+        ? duration
         : Duration.zero,
-    curve: ScrollVisibility.curve,
+    curve: curve,
     child: child,
     builder: (context, position, child) {
       if (onVisibilityChanged != null) {

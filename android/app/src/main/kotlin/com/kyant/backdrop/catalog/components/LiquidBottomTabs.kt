@@ -68,6 +68,7 @@ fun LiquidBottomTabs(
     surfaceOpacity: Float = 0.4f,
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
+    onTabReselected: ((Int) -> Unit)? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = !darkTheme
@@ -104,6 +105,7 @@ fun LiquidBottomTabs(
         var currentIndex by remember(selectedTabIndex) {
             mutableIntStateOf(selectedTabIndex())
         }
+        val pointerTravel = remember { floatArrayOf(0f) }
         val dampedDragAnimation = remember(animationScope) {
             DampedDragAnimation(
                 animationScope = animationScope,
@@ -112,9 +114,13 @@ fun LiquidBottomTabs(
                 visibilityThreshold = 0.001f,
                 initialScale = 1f,
                 pressedScale = 78f / 56f,
-                onDragStarted = {},
+                onDragStarted = { pointerTravel[0] = 0f },
                 onDragStopped = {
                     val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
+                    if (targetIndex == selectedTabIndex() &&
+                        pointerTravel[0] < with(density) { 4f.dp.toPx() }) {
+                        onTabReselected?.invoke(targetIndex)
+                    }
                     currentIndex = targetIndex
                     animateToValue(targetIndex.toFloat())
                     animationScope.launch {
@@ -125,12 +131,19 @@ fun LiquidBottomTabs(
                     }
                 },
                 onDrag = { _, dragAmount ->
+                    pointerTravel[0] += abs(dragAmount.x) + abs(dragAmount.y)
                     updateValue(
                         (targetValue + dragAmount.x / tabWidth * if (isLtr) 1f else -1f)
                             .fastCoerceIn(0f, (tabsCount - 1).toFloat())
                     )
                     animationScope.launch {
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
+                    }
+                },
+                onDragCancelled = {
+                    updateValue(selectedTabIndex().toFloat())
+                    animationScope.launch {
+                        offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                     }
                 }
             )

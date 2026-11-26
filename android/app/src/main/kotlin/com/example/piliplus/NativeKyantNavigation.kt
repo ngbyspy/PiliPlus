@@ -322,13 +322,16 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val selectedProvider = remember { { selected.value } }
         val density = c.height / 64f
         CompositionLocalProvider(LocalDensity provides Density(density, c.fontScale)) {
+          key(c.width, c.height, c.items.map { it.id }) {
             Box(Modifier.fillMaxSize()) {
                 Canvas(Modifier.fillMaxSize().alpha(0f).layerBackdrop(backdrop)) {
                     bitmap?.let { drawImage(it) }
                 }
                 LiquidBottomTabs(
                     selectedTabIndex = selectedProvider,
-                    onTabSelected = { emitSelection(it) },
+                    // State acknowledgement from Dart is not another user tap.
+                    onTabSelected = { if (it != config?.selected) emitSelection(it) },
+                    onTabReselected = { emitSelection(it) },
                     backdrop = backdrop,
                     tabsCount = c.items.size,
                     modifier = Modifier.offset { IntOffset(barX.roundToInt(), barY.roundToInt()) }
@@ -351,6 +354,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
                     }
                 }
             }
+          }
         }
     }
 

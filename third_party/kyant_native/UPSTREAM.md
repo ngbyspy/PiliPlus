@@ -11,6 +11,9 @@ removes expect/actual, uses a monotonic velocity clock, and exposes track tint
 opacity/theme inputs. The Compose optics, layered tab content, highlights and
 spring recipes remain native. PiliPlus supplies its own icons, labels, badges,
 selection bridge and lifecycle ownership.
+External selection acknowledgement is deduplicated, explicit reselect taps
+retain refresh behavior, and cancellation restores selection without navigation.
+Native composition is keyed by dimensions/order to reset drag geometry on resize.
 
 NativeKyantNavigation captures only the Flutter SurfaceView with bounded,
 triple-buffered PixelCopy. It never captures the composed window, transmits

@@ -10,6 +10,9 @@ void main() {
   var supported = true;
   var blur = .5;
   setUp(() {
+    WidgetsBinding.instance.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
     supported = true;
     blur = .5;
     calls.clear();
@@ -42,12 +45,15 @@ void main() {
       body: Align(alignment: Alignment.bottomCenter, child: child),
     ),
   );
-  Future<void> emit(Map<String, Object?> args) async {
+  Future<void> emit(
+    Map<String, Object?> args, [
+    String method = 'selected',
+  ]) async {
     await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .handlePlatformMessage(
           channel.name,
           const StandardMethodCodec().encodeMethodCall(
-            MethodCall('selected', args),
+            MethodCall(method, args),
           ),
           (_) {},
         );
@@ -155,4 +161,69 @@ void main() {
     expect(calls.lastWhere((c) => c.method == 'update').method, 'update');
     await close(tester);
   });
+
+  testWidgets(
+    'waiting uses a temporary fallback and acknowledges a clean scene',
+    (tester) async {
+      await tester.pumpWidget(host(bar()));
+      await tester.pumpAndSettle();
+      Map config() =>
+          calls.lastWhere((c) => c.method == 'update').arguments as Map;
+      final owner = config()['owner'];
+      await emit({'owner': owner, 'ready': false}, 'availability');
+      await tester.pumpAndSettle();
+      expect(find.text('original navigation'), findsOneWidget);
+      expect(config()['fallback'], true);
+      expect(config()['owner'], owner);
+      await emit({'owner': -1, 'ready': true, 'epoch': 8}, 'availability');
+      await tester.pumpAndSettle();
+      expect(find.text('original navigation'), findsOneWidget);
+      await emit({'owner': owner, 'ready': true, 'epoch': 9}, 'availability');
+      await tester.pumpAndSettle();
+      expect(find.text('original navigation'), findsNothing);
+      expect(config()['fallback'], false);
+      expect(config()['readyEpoch'], 9);
+      expect(selections, isEmpty);
+      await close(tester);
+    },
+  );
+
+  testWidgets(
+    'inactive scenes cannot restart capture and stale failure is ignored',
+    (tester) async {
+      final offset = ValueNotifier(0.0);
+      await tester.pumpWidget(
+        host(
+          ValueListenableBuilder<double>(
+            valueListenable: offset,
+            child: RepaintBoundary(child: bar()),
+            builder: (_, value, child) => Transform.translate(
+              offset: Offset(0, value),
+              child: child,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final owner =
+          (calls.lastWhere((c) => c.method == 'update').arguments
+              as Map)['owner'];
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      final updates = calls.where((c) => c.method == 'update').length;
+      offset.value = 2;
+      await tester.pump();
+      expect(calls.where((c) => c.method == 'update').length, updates);
+      await emit({'owner': owner, 'reason': 'old surface'}, 'failed');
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('original navigation'), findsNothing);
+      expect(
+        calls.where((c) => c.method == 'update').length,
+        greaterThan(updates),
+      );
+      await close(tester);
+      offset.dispose();
+    },
+  );
 }

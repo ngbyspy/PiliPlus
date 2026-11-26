@@ -29,6 +29,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -73,7 +79,7 @@ fun LiquidBottomTabs(
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = !darkTheme
-    val accentColor = accent ?: 
+    val accentColor = accent ?:
         if (isLightTheme) Color(0xFF0088FF)
         else Color(0xFF0091FF)
     val containerColor =
@@ -81,6 +87,7 @@ fun LiquidBottomTabs(
         else Color(0xFF121212).copy(surfaceOpacity)
 
     val tabsBackdrop = rememberLayerBackdrop()
+    val materialBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier,
@@ -177,6 +184,10 @@ fun LiquidBottomTabs(
             )
         }
 
+        val selectedBackdrop = remember(backdrop, materialBackdrop, dampedDragAnimation) {
+            PressBackdrop(backdrop, materialBackdrop) { dampedDragAnimation.pressProgress }
+        }
+
         Row(
             Modifier
                 .graphicsLayer {
@@ -184,6 +195,7 @@ fun LiquidBottomTabs(
                 }
                 .drawBackdrop(
                     backdrop = backdrop,
+                    exportedBackdrop = materialBackdrop,
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
@@ -219,24 +231,6 @@ fun LiquidBottomTabs(
                     .graphicsLayer {
                         translationX = panelOffset
                     }
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
-                            if (blurRadius > 0f) blur(blurRadius.dp.toPx())
-                            lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
-                        },
-                        highlight = {
-                            val progress = dampedDragAnimation.pressProgress
-                            Highlight.Default.copy(alpha = progress)
-                        },
-                        onDrawSurface = { drawRect(containerColor) }
-                    )
                     .then(interactiveHighlight.modifier)
                     .height(56f.dp)
                     .fillMaxWidth()
@@ -258,7 +252,7 @@ fun LiquidBottomTabs(
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                    backdrop = rememberCombinedBackdrop(selectedBackdrop, tabsBackdrop),
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
@@ -306,3 +300,35 @@ fun LiquidBottomTabs(
     }
 }
 
+// Cross-fade the background material only. The foreground tab layer is combined
+// afterwards, so icons/text remain sharp in both states and retain native lensing.
+private class PressBackdrop(
+    private val clear: Backdrop,
+    private val frosted: Backdrop,
+    private val progress: () -> Float
+) : Backdrop {
+    override val isCoordinatesDependent = true
+    private val paint = Paint()
+
+    override fun DrawScope.drawBackdrop(
+        density: Density,
+        coordinates: LayoutCoordinates?,
+        layerBlock: (GraphicsLayerScope.() -> Unit)?
+    ) {
+        val frost = (1f - progress()).coerceIn(0f, 1f)
+        if (frost == 1f) {
+            with(frosted) { drawBackdrop(density, coordinates, layerBlock) }
+            return
+        }
+        with(clear) { drawBackdrop(density, coordinates, layerBlock) }
+        if (frost > 0f) {
+            paint.alpha = frost
+            drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
+            try {
+                with(frosted) { drawBackdrop(density, coordinates, layerBlock) }
+            } finally {
+                drawContext.canvas.restore()
+            }
+        }
+    }
+}

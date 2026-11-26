@@ -70,6 +70,11 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
   final _owner = ++_nextOwner;
   final _anchor = GlobalKey();
   bool _supported = false, _failed = false, _queued = false, _visible = false;
+  bool _waiting = false;
+  int _readyEpoch = 0;
+  bool _resumed =
+      WidgetsBinding.instance.lifecycleState == null ||
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
   String? _lastConfig;
 
   @override
@@ -99,7 +104,15 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
     if (call.method == 'selected' && _visible) {
       final index = widget.items.indexWhere((item) => item.id == args?['id']);
       if (index >= 0) widget.onSelected(index);
-    } else if (call.method == 'failed') {
+    } else if (call.method == 'availability') {
+      if (!_resumed) return;
+      setState(() {
+        _waiting = args?['ready'] != true;
+        if (!_waiting) _readyEpoch = args?['epoch'] as int? ?? _readyEpoch;
+      });
+      _lastConfig = null;
+      _queueSync();
+    } else if (call.method == 'failed' && _resumed) {
       await _hide();
       if (mounted) {
         setState(() => _failed = true);
@@ -119,7 +132,10 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
   }
 
   bool _canShow() {
-    if (!_supported || _failed || !TickerMode.valuesOf(context).enabled) {
+    if (!_resumed ||
+        !_supported ||
+        _failed ||
+        !TickerMode.valuesOf(context).enabled) {
       return false;
     }
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
@@ -137,6 +153,9 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
       _queued = false;
       if (mounted) unawaited(_sync());
     });
+    // Lifecycle callbacks can arrive while Flutter is otherwise idle. Request
+    // that one scene explicitly; calls during painting do not schedule a loop.
+    SchedulerBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _sync() async {
@@ -168,6 +187,8 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
       'blurRadius': GlassAppearance.nativeBlurRadius(widget.blur),
       'fontScale': MediaQuery.textScalerOf(context).scale(12) / 12,
       'visible': true,
+      'fallback': _waiting,
+      'readyEpoch': _readyEpoch,
     };
     try {
       final encoded = jsonEncode(config);
@@ -218,7 +239,10 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _resumed = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.resumed) {
+      // A new foreground/surface lifecycle can recover a previous native fault.
+      if (_failed) setState(() => _failed = false);
       _lastConfig = null;
       _queueSync();
     } else {
@@ -243,17 +267,23 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
         MediaQuery.disableAnimationsOf(context)) {
       return widget.fallback;
     }
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(24, 14, 24, 10),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: _NativeBarAnchor(
-          key: _anchor,
-          onScene: _queueSync,
-          child: const SizedBox(width: double.infinity, height: 64),
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        if (_waiting) widget.fallback,
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(24, 14, 24, 10),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: _NativeBarAnchor(
+              key: _anchor,
+              onScene: _queueSync,
+              child: const SizedBox(width: double.infinity, height: 64),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

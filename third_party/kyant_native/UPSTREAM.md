@@ -31,3 +31,15 @@ implementation on 2026-11-26 and authorized formal-source promotion and Android
 packaging, including an independent blur control. The opt-in preference still
 defaults off. Native host resources are enabled in formal and acceptance builds;
 SDK support, visibility and the user's preference continue to gate actual use.
+
+Foreground recovery observes Android focus, Flutter display and SurfaceHolder
+readiness. Missing/new surface buffers are transient: the original Flutter bar
+is shown during bounded warm-up, and a scene-epoch acknowledgement prevents
+capturing that fallback during handover. Late PixelCopy callbacks are discarded.
+No polling runs in the background; after warm-up only actual scene/surface events
+retry, with throttling. Compose lifecycle pauses with the activity/focus.
+
+The selected thumb now samples the exported frosted track material at rest and
+cross-fades to the clear source while pressed. Its foreground glyph layer is
+separate, preserving sharp text/icons and the original native lens/highlight
+animations. Fully idle/pressed paths avoid the cross-fade save-layer allocation.

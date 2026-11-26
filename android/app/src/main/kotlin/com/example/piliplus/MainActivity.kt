@@ -84,6 +84,11 @@ class MainActivity : AudioServiceActivity() {
         nativeKyant?.resume()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        nativeKyant?.focusChanged(hasFocus)
+    }
+
     override fun onDestroy() {
         nativeKyant?.dispose()
         nativeKyant = null

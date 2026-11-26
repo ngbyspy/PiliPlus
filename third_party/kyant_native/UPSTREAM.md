@@ -48,3 +48,13 @@ retain existing track preferences, add thumb clarity (default90%, old0.1 tint)
 and additional blur (default16dp, 0..32dp). The stronger thumb blur samples a
 bounded crop with padding derived from the configured combined blur, without
 resizing buffers during native press animation or partial scrolling.
+
+Bar and thumb now have independent automatic/white/black base-color choices;
+automatic preserves the earlier light/dark defaults. Opacity remains controlled
+by each clarity preference and only the thumb's own tint fades on press.
+The two exported material GraphicsLayers use the exact Capsule outline with
+clip=true. Library 2.0.1 clips the displayed node but records an unclipped
+rectangle for exportedBackdrop; sampling it through the next lens can expose
+invisible corner tint. The local modifier caches the shape path by geometry
+without changing the pinned library, shader or spring formulas. Native visual
+acceptance of this repair is pending the user's own installation.

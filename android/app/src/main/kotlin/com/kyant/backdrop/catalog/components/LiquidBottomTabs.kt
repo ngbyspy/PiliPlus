@@ -26,9 +26,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -40,6 +43,7 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.utils.DampedDragAnimation
@@ -69,6 +73,8 @@ fun LiquidBottomTabs(
     blurRadius: Float = 8f,
     buttonOpacity: Float = 0.1f,
     buttonBlurRadius: Float = 16f,
+    surfaceTint: String = "automatic",
+    buttonTint: String = "automatic",
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
     onTabReselected: ((Int) -> Unit)? = null,
@@ -78,9 +84,11 @@ fun LiquidBottomTabs(
     val accentColor = accent ?:
         if (isLightTheme) Color(0xFF0088FF)
         else Color(0xFF0091FF)
-    val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(surfaceOpacity)
-        else Color(0xFF121212).copy(surfaceOpacity)
+    val containerColor = glassTint(surfaceTint,
+        if (isLightTheme) Color(0xFFFAFAFA) else Color(0xFF121212))
+        .copy(alpha = surfaceOpacity)
+    val buttonColor = glassTint(buttonTint,
+        if (isLightTheme) Color.Black else Color.White)
 
     val tabsBackdrop = rememberLayerBackdrop()
     val materialBackdrop = rememberLayerBackdrop()
@@ -186,6 +194,7 @@ fun LiquidBottomTabs(
                 .graphicsLayer {
                     translationX = panelOffset
                 }
+                .clipExportedCapsule(materialBackdrop)
                 .drawBackdrop(
                     backdrop = backdrop,
                     exportedBackdrop = materialBackdrop,
@@ -219,6 +228,7 @@ fun LiquidBottomTabs(
                 .clearAndSetSemantics {}
                 .alpha(0f)
                 .graphicsLayer { translationX = panelOffset }
+                .clipExportedCapsule(buttonBackdrop)
                 .drawBackdrop(
                     backdrop = materialBackdrop,
                     exportedBackdrop = buttonBackdrop,
@@ -233,7 +243,7 @@ fun LiquidBottomTabs(
                     onDrawSurface = {
                         val weight = (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
                         drawRect(
-                            if (isLightTheme) Color.Black else Color.White,
+                            buttonColor,
                             alpha = buttonOpacity * weight
                         )
                     }
@@ -313,4 +323,21 @@ fun LiquidBottomTabs(
                 .fillMaxWidth(1f / tabsCount)
         )
     }
+}
+
+private fun glassTint(choice: String, automatic: Color): Color = when (choice) {
+    "white" -> Color.White
+    "black" -> Color.Black
+    else -> automatic
+}
+
+// drawBackdrop clips the displayed node, but its exported GraphicsLayer records
+// a rectangular surface. The next lens must sample the SAME transparent capsule
+// outline, otherwise it reveals the invisible rectangle outside the visible bar.
+// Cache the exact Capsule path on size/layout changes, not on each press frame.
+private fun Modifier.clipExportedCapsule(backdrop: LayerBackdrop): Modifier = drawWithCache {
+    val outline = Capsule().createOutline(size, layoutDirection, this)
+    backdrop.graphicsLayer.setPathOutline(Path().apply { addOutline(outline) })
+    backdrop.graphicsLayer.clip = true
+    onDrawWithContent { drawContent() }
 }

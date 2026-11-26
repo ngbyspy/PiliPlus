@@ -1,6 +1,10 @@
 # Kyant AndroidLiquidGlass 接入 PiliPlus Android 可行性
 
-核查日期：2026-11-26。本报告是源码分析，未替换玻璃实现、未改 Android 依赖、未编译安装包或操作设备。N01 去除独立合入 spy/main；本研究及后续移植试作只属于 spy/dev。
+核查日期：2026-11-26。下文保留移植前的源码分析。随后已按用户授权在 spy/dev 完成原生 Kyant 底栏实验并编译隔离的 Release/AOT dev APK；N01 去除仍独立保留在 spy/main，原生实验未提升正式版。
+
+当前实现保留 Flutter SurfaceView 主渲染，通过原生兄弟 ComposeView 显示 Kyant 底栏，并按实际 Flutter 场景更新进行局部 PixelCopy；固定尺寸三缓冲、合并在途请求，避免捕获玻璃自身，像素不跨 Dart 通道、不写入磁盘。此链路不是零拷贝，真机观感、延迟和性能仍待用户实测。
+
+安装包对应源码为 `9fb1950ead3e9e869296b53a3f7b6d0f5b8a39ac`，本地入口为 `Releases/Testing/kyant-native/index.html`。打开「设置 → 外观设置 → Kyant 原生底栏（实验）」测试，关闭后恢复原设置。Android 13+，默认关闭；开发包沿用原独立 dev 身份/签名。205 项发行回归和 4 项新增桥接测试通过，不等同于用户真机验收。
 
 ## 判断与建议
 

@@ -26,12 +26,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -43,11 +41,11 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.utils.DampedDragAnimation
 import com.kyant.backdrop.catalog.utils.InteractiveHighlight
+import com.kyant.backdrop.catalog.utils.rememberButtonBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -92,7 +90,6 @@ fun LiquidBottomTabs(
 
     val tabsBackdrop = rememberLayerBackdrop()
     val materialBackdrop = rememberLayerBackdrop()
-    val buttonBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier,
@@ -189,67 +186,47 @@ fun LiquidBottomTabs(
             )
         }
 
-        Row(
+        val barTransform: GraphicsLayerScope.() -> Unit = {
+            val progress = dampedDragAnimation.pressProgress
+            val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+            scaleX = scale
+            scaleY = scale
+        }
+
+        // Record the actual displayed bar OUTSIDE its movement/press transform.
+        // The capture includes its real clipped shape/highlight, but no glyphs.
+        // Exporting drawBackdrop's internal surface loses both those properties.
+        Box(
             Modifier
+                .layerBackdrop(materialBackdrop)
                 .graphicsLayer {
                     translationX = panelOffset
                 }
-                .clipExportedCapsule(materialBackdrop)
                 .drawBackdrop(
                     backdrop = backdrop,
-                    exportedBackdrop = materialBackdrop,
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
                         if (blurRadius > 0f) blur(blurRadius.dp.toPx())
                         lens(24f.dp.toPx(), 24f.dp.toPx())
                     },
-                    layerBlock = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-                        scaleX = scale
-                        scaleY = scale
-                    },
+                    layerBlock = barTransform,
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)
                 .fillMaxWidth()
+        )
+
+        Row(
+            Modifier
+                .graphicsLayer { translationX = panelOffset }
+                .graphicsLayer(barTransform)
+                .height(64f.dp)
+                .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content
-        )
-
-        // The button's own material is applied to the finished BAR material,
-        // never to the raw page. At full press its blur/tint disappear, exposing
-        // the bar unchanged. Export before adding glyphs so they stay sharp.
-        Box(
-            Modifier
-                .clearAndSetSemantics {}
-                .alpha(0f)
-                .graphicsLayer { translationX = panelOffset }
-                .clipExportedCapsule(buttonBackdrop)
-                .drawBackdrop(
-                    backdrop = materialBackdrop,
-                    exportedBackdrop = buttonBackdrop,
-                    shape = { Capsule() },
-                    effects = {
-                        val weight = (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
-                        val radius = buttonBlurRadius * weight
-                        if (radius > 0f) blur(radius.dp.toPx())
-                    },
-                    highlight = null,
-                    shadow = null,
-                    onDrawSurface = {
-                        val weight = (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
-                        drawRect(
-                            buttonColor,
-                            alpha = buttonOpacity * weight
-                        )
-                    }
-                )
-                .height(64f.dp)
-                .fillMaxWidth()
         )
 
         CompositionLocalProvider(
@@ -265,7 +242,6 @@ fun LiquidBottomTabs(
                     .graphicsLayer {
                         translationX = panelOffset
                     }
-                    .then(interactiveHighlight.modifier)
                     .height(56f.dp)
                     .fillMaxWidth()
                     .padding(horizontal = 4f.dp)
@@ -274,6 +250,21 @@ fun LiquidBottomTabs(
                 content = content
             )
         }
+
+        // As in upstream's combined backdrop, include the PAGE under the bar.
+        // This makes the sampled scene opaque: refracting a transparent capsule
+        // over the visible bar would expose its unrefracted silhouette as well.
+        val buttonBackdrop = rememberButtonBackdrop(
+            scene = rememberCombinedBackdrop(backdrop, materialBackdrop),
+            foreground = tabsBackdrop,
+            blurRadius = {
+                buttonBlurRadius * (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
+            },
+            tint = {
+                buttonColor.copy(alpha = buttonOpacity *
+                    (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f))
+            }
+        )
 
         Box(
             Modifier
@@ -286,7 +277,7 @@ fun LiquidBottomTabs(
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(buttonBackdrop, tabsBackdrop),
+                    backdrop = buttonBackdrop,
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
@@ -329,15 +320,4 @@ private fun glassTint(choice: String, automatic: Color): Color = when (choice) {
     "white" -> Color.White
     "black" -> Color.Black
     else -> automatic
-}
-
-// drawBackdrop clips the displayed node, but its exported GraphicsLayer records
-// a rectangular surface. The next lens must sample the SAME transparent capsule
-// outline, otherwise it reveals the invisible rectangle outside the visible bar.
-// Cache the exact Capsule path on size/layout changes, not on each press frame.
-private fun Modifier.clipExportedCapsule(backdrop: LayerBackdrop): Modifier = drawWithCache {
-    val outline = Capsule().createOutline(size, layoutDirection, this)
-    backdrop.graphicsLayer.setPathOutline(Path().apply { addOutline(outline) })
-    backdrop.graphicsLayer.clip = true
-    onDrawWithContent { drawContent() }
 }

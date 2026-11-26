@@ -3,24 +3,26 @@
   "upstreamCommit": "217fb54f51f6764176319bbdedab2a7522d75401",
   "version": "2.2.1",
   "relationship": "vertical",
-  "upstreamFixes": ["history-row-overflow"],
+  "upstreamFixes": [
+    "history-row-overflow"
+  ],
   "improvementRevision": 1,
-  "revision": 7,
+  "revision": 8,
   "displayVersion": "2.2.1.1",
-  "tag": "spy-v2.2.1.1-r7",
+  "tag": "spy-v2.2.1.1-r8",
   "androidRenderer": "impeller",
   "androidVersionCode": 5655,
   "androidReleaseEnabled": true,
   "androidApplicationId": "com.ngbyspy.piliplus.spy",
   "androidDisplayName": "PiliPlus SPY",
-  "androidPackageVersionCode": 565506,
+  "androidPackageVersionCode": 565507,
   "androidCertificateSha256": "b9b273a5fb00a430b4d0a7722f666db916ba1788fca6b913d989a859e335acbc",
   "androidUpdateFrom": {
     "applicationId": "com.ngbyspy.piliplus.spy",
-    "versionCode": 565505,
+    "versionCode": 565506,
     "certificateSha256": "b9b273a5fb00a430b4d0a7722f666db916ba1788fca6b913d989a859e335acbc",
-    "sha256": "154e821e3c97d5bbb6f2b913676401e87431586ff8315c498e09da16ac22aa82",
-    "file": "spy-v2.2.1.1-r6/Android/PiliPlus-SPY-2.2.1.1-android-arm64-release.apk"
+    "sha256": "b74988aaee1a8597c0fac4e8232a45947c0b5c216afb9feb899679788eb5099c",
+    "file": "spy-v2.2.1.1-r7/Android/PiliPlus-SPY-2.2.1.1-android-arm64-release.apk"
   },
   "iosBuildNumber": "5655",
   "iosBundleId": "com.spy.piliPlus",

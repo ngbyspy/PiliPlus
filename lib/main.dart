@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:PiliPlus/common/widgets/native_kyant_navigation.dart';
+
 import 'package:PiliPlus/build_config.dart';
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/back_detector.dart';
@@ -332,7 +334,11 @@ class MyApp extends StatelessWidget {
         ),
         builder: _builder,
       ),
-      navigatorObservers: [routeObserver, FlutterSmartDialog.observer],
+      navigatorObservers: [
+        routeObserver,
+        FlutterSmartDialog.observer,
+        KyantNavigationRoutes.instance,
+      ],
       scrollBehavior: PlatformUtils.isDesktop
           ? const CustomScrollBehavior()
           : null,

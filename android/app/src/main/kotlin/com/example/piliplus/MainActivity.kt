@@ -10,8 +10,19 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
+    private var nativeKyant: NativeKyantNavigation? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if (Build.VERSION.SDK_INT >= 33 && resources.getBoolean(R.bool.spy_native_kyant)) {
+            nativeKyant = NativeKyantNavigation(this, flutterEngine)
+        } else {
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger,
+                "com.ngbyspy.piliplus/kyant_navigation").setMethodCallHandler { call, result ->
+                if (call.method == "isSupported") result.success(false)
+                else result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.example.piliplus/theme")
             .setMethodCallHandler { call, result ->
                 if (call.method != "getSystemColorRoles") {
@@ -72,6 +83,22 @@ class MainActivity : AudioServiceActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         AndroidHelper.ToDart.onUserLeaveHint?.run()
+    }
+
+    override fun onPause() {
+        nativeKyant?.pause()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        nativeKyant?.resume()
+    }
+
+    override fun onDestroy() {
+        nativeKyant?.dispose()
+        nativeKyant = null
+        super.onDestroy()
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration?) {

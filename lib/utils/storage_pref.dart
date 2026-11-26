@@ -1109,6 +1109,11 @@ abstract final class Pref {
     _setting.get(SettingBoxKey.androidGlassClarity),
   );
 
+  static bool get androidNativeKyantNavigation => _setting.get(
+    SettingBoxKey.androidNativeKyantNavigation,
+    defaultValue: false,
+  );
+
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
 

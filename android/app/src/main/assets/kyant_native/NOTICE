@@ -1,0 +1,5 @@
+Native glass catalog components adapted from Kyant0/AndroidLiquidGlass.
+https://github.com/Kyant0/AndroidLiquidGlass
+Catalog source eb4a0ea2e17542ea28c2e71088f7dd9acf77aad5; backdrop library 2.0.1.
+Apache License 2.0. PiliPlus integration and modifications are recorded in
+third_party/kyant_native/UPSTREAM.md in the corresponding source repository.

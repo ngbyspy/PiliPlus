@@ -279,9 +279,7 @@ class _MainAppState extends PopScopeState<MainApp>
           return Obx(
             () => ScrollLinkedNavigation(
               offset: barOffset.value / Style.topBarHeight,
-              animate: _mainController.bottomBarSettling.value,
-              onVisibilityChanged: (value) =>
-                  _mainController.bottomNavVisibility.value = value,
+              animate: false,
               child: bottomNav!,
             ),
           );
@@ -290,8 +288,6 @@ class _MainAppState extends PopScopeState<MainApp>
           return Obx(
             () => ScrollLinkedNavigation(
               offset: showBottomBar.value ? 0 : 1,
-              onVisibilityChanged: (value) =>
-                  _mainController.bottomNavVisibility.value = value,
               child: bottomNav!,
             ),
           );

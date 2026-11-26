@@ -1,4 +1,3 @@
-import 'package:PiliPlus/common/widgets/scroll_intent.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
@@ -6,9 +5,7 @@ import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
-abstract class CommonPageState<T extends StatefulWidget> extends State<T>
-    with WidgetsBindingObserver {
-  final _scrollIntent = ScrollVisibility();
+abstract class CommonPageState<T extends StatefulWidget> extends State<T> {
   bool _tickerEnabled = true;
   RxDouble? _barOffset;
   RxBool? _showTopBar;
@@ -17,7 +14,6 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
 
   bool get needsCorrection => false;
   bool get isScrollPageActive => true;
-  bool get restoreBarsOnTickerResume => true;
 
   @override
   void initState() {
@@ -27,7 +23,6 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
     if (Get.isRegistered<HomeController>()) {
       _showTopBar = Get.find<HomeController>().showTopBar;
     }
-    WidgetsBinding.instance.addObserver(this);
   }
 
   Widget onBuild(Widget child) {
@@ -38,7 +33,7 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
       );
     }
     if (_showTopBar != null || _showBottomBar != null) {
-      return NotificationListener<ScrollNotification>(
+      return NotificationListener<UserScrollNotification>(
         onNotification: onNotificationType1,
         child: child,
       );
@@ -49,42 +44,24 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final enabled = TickerMode.valuesOf(context).enabled;
-    if (enabled && !_tickerEnabled && isScrollPageActive) {
-      _scrollIntent.reset();
-      if (restoreBarsOnTickerResume) _mainController.restoreBars();
-    }
-    _tickerEnabled = enabled;
+    _tickerEnabled = TickerMode.valuesOf(context).enabled;
   }
 
-  void _restoreBars() {
-    _scrollIntent.reset();
-    _mainController.restoreBars();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        _tickerEnabled &&
-        isScrollPageActive) {
-      _restoreBars();
-    }
-  }
-
-  bool onNotificationType1(ScrollNotification notification) {
+  bool onNotificationType1(UserScrollNotification notification) {
     if (!_tickerEnabled ||
         !isScrollPageActive ||
         !_mainController.useBottomNav) {
       return false;
     }
-    switch (_scrollIntent.update(notification)) {
+    if (notification.metrics.axis == .horizontal) return false;
+    switch (notification.direction) {
       case .forward:
         _showTopBar?.value = true;
         _showBottomBar?.value = true;
       case .reverse:
         _showTopBar?.value = false;
         _showBottomBar?.value = false;
-      case .idle || null:
+      case .idle:
         break;
     }
     return false;
@@ -108,25 +85,8 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
     final metrics = notification.metrics;
     if (metrics.axis == .horizontal) return false;
 
-    final intent = _scrollIntent.update(notification);
-    if (notification is ScrollStartNotification) {
-      if (_mainController.bottomBarSettling.value) {
-        if (_mainController.bottomNavVisibility.value case final visibility?) {
-          _barOffset!.value = (1 - visibility) * Style.topBarHeight;
-        }
-      }
-      _mainController.bottomBarSettling.value = false;
-    }
-    if (notification is ScrollEndNotification) {
-      _mainController.bottomBarSettling.value = true;
-      _barOffset!.value =
-          intent == .forward ||
-              (intent == null && _barOffset!.value < Style.topBarHeight / 2)
-          ? 0
-          : Style.topBarHeight;
-    }
     if (notification is ScrollUpdateNotification) {
-      if (intent == null) return false;
+      if (notification.dragDetails == null) return false;
       final pixel = metrics.pixels;
       final scrollDelta = notification.scrollDelta ?? 0;
       if (pixel < 0.0 && scrollDelta > 0) return false;
@@ -151,8 +111,9 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
       return false;
     }
 
-    if (notification is OverscrollNotification && intent == .forward) {
-      _barOffset!.value = 0;
+    if (notification is OverscrollNotification &&
+        notification.dragDetails != null) {
+      _updateOffset(notification.overscroll);
     }
 
     return false;
@@ -160,7 +121,6 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _barOffset = null;
     _showTopBar = null;
     _showBottomBar = null;

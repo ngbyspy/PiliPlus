@@ -5,6 +5,7 @@ import 'package:PiliPlus/pages/common/common_page.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/services/account_service.dart';
 import 'package:PiliPlus/utils/storage.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
@@ -80,7 +81,7 @@ void main() {
 
   for (final sync in [false, true]) {
     testWidgets(
-      'cached page activation restores a partially hidden bar (sync=$sync)',
+      'cached page activation preserves the current bar position (sync=$sync)',
       (tester) async {
         Get.put<AccountService>(_Account());
         final shell = Get.put<MainController>(_Shell(sync));
@@ -106,48 +107,66 @@ void main() {
         active.value = true;
         await tester.pumpAndSettle();
         if (sync) {
-          expect(shell.barOffset!.value, 0);
+          expect(shell.barOffset!.value, Style.topBarHeight * .55);
         } else {
-          expect(shell.showBottomBar!.value, isTrue);
+          expect(shell.showBottomBar!.value, isFalse);
         }
-        expect(shell.bottomBarSettling.value, isTrue);
         await tester.pumpWidget(const SizedBox.shrink());
         scroll.dispose();
         active.dispose();
       },
     );
 
-    testWidgets('restores the bar when the feed reaches its top (sync=$sync)', (
+    testWidgets('small scroll changes follow the selected mode (sync=$sync)', (
       tester,
     ) async {
       Get.put<AccountService>(_Account());
       final shell = Get.put<MainController>(_Shell(sync));
       final scroll = ScrollController();
       await tester.pumpWidget(MaterialApp(home: _Feed(scroll)));
-      await tester.drag(find.byType(ListView), const Offset(0, -180));
+      scroll.jumpTo(200);
       await tester.pumpAndSettle();
-      expect(scroll.offset, greaterThan(0));
+      final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+      void direction(ScrollDirection value) => UserScrollNotification(
+        metrics: scroll.position,
+        context: scrollable.context,
+        direction: value,
+      ).dispatch(scrollable.context);
+      void update(double delta, {bool dragged = true}) =>
+          ScrollUpdateNotification(
+            metrics: scroll.position,
+            context: scrollable.context,
+            scrollDelta: delta,
+            dragDetails: dragged
+                ? DragUpdateDetails(
+                    globalPosition: Offset.zero,
+                    delta: Offset(0, -delta),
+                  )
+                : null,
+          ).dispatch(scrollable.context);
+
+      direction(ScrollDirection.reverse);
+      update(7);
       if (sync) {
-        expect(shell.barOffset!.value, Style.topBarHeight);
+        expect(shell.barOffset!.value, 7);
+        update(11);
+        expect(shell.barOffset!.value, 18);
       } else {
         expect(shell.showBottomBar!.value, isFalse);
       }
-
-      await tester.drag(find.byType(ListView), const Offset(0, 85));
-      await tester.pumpAndSettle();
-      expect(scroll.offset, greaterThan(0));
-      if (sync) {
-        expect(shell.barOffset!.value, 0);
-      } else {
-        expect(shell.showBottomBar!.value, isTrue);
-      }
-
-      await tester.drag(find.byType(ListView), const Offset(0, -180));
-      await tester.pumpAndSettle();
-      scroll.jumpTo(scroll.position.minScrollExtent);
+      direction(ScrollDirection.forward);
+      update(-3);
+      ScrollEndNotification(
+        metrics: scroll.position,
+        context: scrollable.context,
+      ).dispatch(scrollable.context);
+      direction(ScrollDirection.idle);
       await tester.pumpAndSettle();
       if (sync) {
-        expect(shell.barOffset!.value, 0);
+        expect(shell.barOffset!.value, 15);
+        update(40, dragged: false);
+        await tester.pumpAndSettle();
+        expect(shell.barOffset!.value, 15);
       } else {
         expect(shell.showBottomBar!.value, isTrue);
       }
@@ -155,6 +174,31 @@ void main() {
       scroll.dispose();
     });
   }
+
+  testWidgets('user overscroll changes the offset without snapping open', (
+    tester,
+  ) async {
+    Get.put<AccountService>(_Account());
+    final shell = Get.put<MainController>(_Shell(true));
+    final scroll = ScrollController();
+    await tester.pumpWidget(MaterialApp(home: _Feed(scroll)));
+    shell.barOffset!.value = Style.topBarHeight / 2;
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+    OverscrollNotification(
+      metrics: scroll.position,
+      context: scrollable.context,
+      overscroll: -4,
+      dragDetails: DragUpdateDetails(globalPosition: Offset.zero),
+    ).dispatch(scrollable.context);
+    ScrollEndNotification(
+      metrics: scroll.position,
+      context: scrollable.context,
+    ).dispatch(scrollable.context);
+    await tester.pumpAndSettle();
+    expect(shell.barOffset!.value, Style.topBarHeight / 2 - 4);
+    await tester.pumpWidget(const SizedBox.shrink());
+    scroll.dispose();
+  });
 
   testWidgets('an inactive feed cannot change the shared bar', (tester) async {
     Get.put<AccountService>(_Account());

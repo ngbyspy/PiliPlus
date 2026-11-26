@@ -1,53 +1,6 @@
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
 
-/// Visible portions remain interactive; translation maps hits to the painted bar.
-class ScrollLinkedNavigation extends StatelessWidget {
-  const ScrollLinkedNavigation({
-    super.key,
-    required this.offset,
-    required this.child,
-    this.animate = true,
-    this.duration = const Duration(milliseconds: 500),
-    this.curve = Curves.easeInOutCubicEmphasized,
-    this.onVisibilityChanged,
-  });
-  final double offset;
-  final Widget child;
-  final bool animate;
-  final Duration duration;
-  final Curve curve;
-  final ValueChanged<double>? onVisibilityChanged;
-  @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween(begin: offset, end: offset),
-    duration: animate && !MediaQuery.disableAnimationsOf(context)
-        ? duration
-        : Duration.zero,
-    curve: curve,
-    child: child,
-    builder: (context, position, child) {
-      if (onVisibilityChanged != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            onVisibilityChanged!(1 - position.clamp(0.0, 1.0));
-          }
-        });
-      }
-      return IgnorePointer(
-        ignoring: position >= 1,
-        child: ExcludeSemantics(
-          excluding: position >= 1,
-          child: FractionalTranslation(
-            translation: Offset(0, position),
-            child: child,
-          ),
-        ),
-      );
-    },
-  );
-}
-
 /// Shared hysteresis for scroll-linked controls. Positive deltas move down.
 class ScrollVisibility {
   static const hideDistance = 24.0;

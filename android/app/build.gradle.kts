@@ -6,6 +6,7 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val agpMajorVersion = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
@@ -68,6 +69,7 @@ android {
     }
 
     buildFeatures {
+        compose = true
         resValues = true
         if (project.hasProperty("dev")) {
             resValues = true
@@ -76,6 +78,7 @@ android {
 
     buildTypes {
         all {
+            resValue("bool", "spy_native_kyant", "true")
             signingConfig = if (spyAcceptance) signingConfigs["debug"] else config ?: signingConfigs["debug"]
         }
         release {
@@ -143,4 +146,12 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Accepted optional native bar; the preserved Flutter renderer stays in use.
+dependencies {
+    implementation("io.github.kyant0:backdrop:2.0.1")
+    implementation("io.github.kyant0:shapes:1.2.1")
+    implementation("org.jetbrains.compose.foundation:foundation:1.12.0")
+    implementation("org.jetbrains.compose.ui:ui:1.12.0")
 }

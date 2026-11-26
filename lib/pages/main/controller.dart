@@ -62,6 +62,8 @@ class MainController extends GetxController
   final iosLiquidGlassNavigation = Pref.iosLiquidGlassNavigation.obs;
   final androidLiquidGlassNavigation = Pref.androidLiquidGlassNavigation.obs;
   final androidGlassClarity = Pref.androidGlassClarity.obs;
+  final androidGlassBlur = Pref.androidGlassBlur.obs;
+  final androidNativeKyantNavigation = Pref.androidNativeKyantNavigation.obs;
   final useSideBar = Pref.useSideBar;
   final hideSideBarLabel = Pref.hideSideBarLabel;
   final mainTabBarView = Pref.mainTabBarView;

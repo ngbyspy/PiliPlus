@@ -167,6 +167,16 @@ List<SettingsModel> get styleSettings => [
       title: '玻璃通透程度',
       builder: (_) => GlassClaritySetting(
         value: Pref.androidGlassClarity,
+        blurValue: Pref.androidGlassBlur,
+        onBlurChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassBlur.value = value;
+          }
+        },
+        onBlurSaved: (value) => GStorage.setting.put(
+          SettingBoxKey.androidGlassBlur,
+          value,
+        ),
         onChanged: (value) {
           if (Get.isRegistered<MainController>()) {
             Get.find<MainController>().androidGlassClarity.value = value;
@@ -177,6 +187,19 @@ List<SettingsModel> get styleSettings => [
           value,
         ),
       ),
+    ),
+  if (Platform.isAndroid)
+    SwitchModel(
+      title: 'Kyant 原生底栏（实验）',
+      subtitle: 'Android 13 及以上；优先使用原生玻璃，关闭后恢复原底栏设置',
+      leading: const Icon(Icons.science_outlined),
+      setKey: SettingBoxKey.androidNativeKyantNavigation,
+      defaultVal: false,
+      onChanged: (value) {
+        if (Get.isRegistered<MainController>()) {
+          Get.find<MainController>().androidNativeKyantNavigation.value = value;
+        }
+      },
     ),
   if (Platform.isIOS)
     SwitchModel(

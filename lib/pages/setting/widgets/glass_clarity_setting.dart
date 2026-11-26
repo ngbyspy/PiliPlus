@@ -8,11 +8,17 @@ class GlassClaritySetting extends StatefulWidget {
     required this.value,
     required this.onChanged,
     required this.onSaved,
+    this.blurValue = GlassAppearance.defaultBlur,
+    this.onBlurChanged,
+    this.onBlurSaved,
   });
 
   final double value;
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onSaved;
+  final double blurValue;
+  final ValueChanged<double>? onBlurChanged;
+  final ValueChanged<double>? onBlurSaved;
 
   @override
   State<GlassClaritySetting> createState() => _GlassClaritySettingState();
@@ -21,6 +27,22 @@ class GlassClaritySetting extends StatefulWidget {
 class _GlassClaritySettingState extends State<GlassClaritySetting> {
   late double _value = GlassAppearance.normalize(widget.value);
   bool _dirty = false;
+  late double _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
+  bool _blurDirty = false;
+
+  void _changeBlur(double value) {
+    final normalized = GlassAppearance.normalizeBlur(value);
+    setState(() {
+      _blurValue = normalized;
+      _blurDirty = true;
+    });
+    widget.onBlurChanged?.call(normalized);
+  }
+
+  void _saveBlur(double value) {
+    widget.onBlurSaved?.call(GlassAppearance.normalizeBlur(value));
+    _blurDirty = false;
+  }
 
   void _change(double value) {
     final normalized = GlassAppearance.normalize(value);
@@ -42,6 +64,9 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
     if (oldWidget.value != widget.value && !_dirty) {
       _value = GlassAppearance.normalize(widget.value);
     }
+    if (oldWidget.blurValue != widget.blurValue && !_blurDirty) {
+      _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
+    }
   }
 
   void _reset() {
@@ -53,6 +78,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
   void dispose() {
     // Persist an in-flight drag if the settings route closes/cancels it.
     if (_dirty) _save(_value);
+    if (_blurDirty) _saveBlur(_blurValue);
     super.dispose();
   }
 
@@ -130,7 +156,9 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
                               child: GlassSegmentedControl<String>(
                                 height: 64,
                                 inset: 4,
-                                blurSigma: 2,
+                                blurSigma: GlassAppearance.flutterBlurSigma(
+                                  _blurValue,
+                                ),
                                 surfaceOpacity: GlassAppearance.surfaceOpacity(
                                   _value,
                                 ),
@@ -165,6 +193,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
             ),
           ),
           Slider(
+            key: const ValueKey('glass-clarity-slider'),
             value: _value,
             divisions: 100,
             label: '${(_value * 100).round()}%',
@@ -177,6 +206,47 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [Text('更有底色'), Text('更清透')],
           ),
+          if (widget.onBlurChanged != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.blur_on, color: colors.onSurfaceVariant),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    '玻璃模糊程度',
+                    style: TextTheme.of(context).titleMedium,
+                  ),
+                ),
+                Text('${(_blurValue * 100).round()}%'),
+                IconButton(
+                  tooltip: '恢复默认模糊程度',
+                  icon: const Icon(Icons.restore),
+                  onPressed: _blurValue == GlassAppearance.defaultBlur
+                      ? null
+                      : () {
+                          _changeBlur(GlassAppearance.defaultBlur);
+                          _saveBlur(_blurValue);
+                        },
+                ),
+              ],
+            ),
+            Slider(
+              key: const ValueKey('glass-blur-slider'),
+              value: _blurValue,
+              divisions: 100,
+              label: '${(_blurValue * 100).round()}%',
+              semanticFormatterCallback: (value) =>
+                  '玻璃模糊程度 ${(value * 100).round()}%',
+              onChanged: _changeBlur,
+              onChangeEnd: _saveBlur,
+            ),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [Text('清晰'), Text('柔和')],
+            ),
+            const Text('0% 关闭背景模糊，折射与高光保留；50% 为默认效果'),
+          ],
         ],
       ),
     );

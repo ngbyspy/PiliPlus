@@ -55,7 +55,7 @@ Flutter PlatformView 可以承载 ComposeView，却不会自动把下方的 Flut
 - 原项目 AGP 9.3.2、Kotlin 2.4.10、Compose 1.12.0、shapes 1.2.1；PiliPlus 目前 AGP 9.1.0、Kotlin 2.4.0、Flutter 3.47.9、compileSdk 37。需核对依赖/Compose 插件兼容，不能整套覆盖现有 Gradle 工程或全局 SDK。
 - 保持 AudioServiceActivity、现有 FlutterEngine 和后台音频连接。原生宿主不是仅加一个控件，生命周期回归必须计入。
 - Dart/Kotlin 交换栏目 ID/顺序、选中项、角标、主题/通透度、布局和选择事件；弹簧和按压高光在原生侧处理，不靠 MethodChannel 每帧控制。
-- 保留 N02、线性部分收起、重复选择刷新和栏目排序/隐藏；不改 iOS/iPadOS 的已验收实现。
+- N01/N02 已移除，底栏恢复原版平移/动画包装；保留线性部分收起、重复选择刷新和栏目排序/隐藏。N03 与 iOS/iPadOS 玻璃实现保留。
 - 验证原生层与 Flutter 弹窗/键盘/全屏的遮挡、按压越界裁剪、半收起命中、安全区、旋转分屏和无障碍。
 
 ## dev 原型的验收顺序

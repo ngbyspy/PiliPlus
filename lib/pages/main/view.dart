@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:PiliPlus/common/widgets/native_kyant_navigation.dart';
 
 import 'package:PiliPlus/common/widgets/android_liquid_glass_navigation.dart';
-import 'package:PiliPlus/common/widgets/scroll_intent.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/floating_navigation_bar.dart';
 import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
@@ -329,18 +328,19 @@ class _MainAppState extends PopScopeState<MainApp>
       if (_mainController.hideBottomBar) {
         if (_mainController.barOffset case final barOffset?) {
           return Obx(
-            () => ScrollLinkedNavigation(
-              offset: barOffset.value / Style.topBarHeight,
-              animate: false,
-              child: bottomNav!,
+            () => FractionalTranslation(
+              translation: Offset(0.0, barOffset.value / Style.topBarHeight),
+              child: bottomNav,
             ),
           );
         }
         if (_mainController.showBottomBar case final showBottomBar?) {
           return Obx(
-            () => ScrollLinkedNavigation(
-              offset: showBottomBar.value ? 0 : 1,
-              child: bottomNav!,
+            () => AnimatedSlide(
+              curve: Curves.easeInOutCubicEmphasized,
+              duration: const Duration(milliseconds: 500),
+              offset: Offset(0, showBottomBar.value ? 0 : 1),
+              child: bottomNav,
             ),
           );
         }

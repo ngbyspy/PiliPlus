@@ -8,7 +8,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.PixelCopy
-import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -48,6 +47,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.kyant.backdrop.catalog.components.LiquidBottomTabs
+import io.flutter.embedding.android.FlutterSurfaceView
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import kotlin.math.ceil
@@ -157,9 +157,11 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         if (!next.visible) hide() else invalidate()
     }
 
-    private fun sourceView(view: View): SurfaceView? {
-        if (view is SurfaceView && view.javaClass.name.startsWith("io.flutter.embedding"))
-            return view
+    private fun sourceView(view: View): FlutterSurfaceView? {
+        // R8 renames FlutterSurfaceView in Release builds. A runtime class-name
+        // prefix silently rejects the real surface; a type check survives R8.
+        // Keep this specific to Flutter so video/player surfaces cannot match.
+        if (view is FlutterSurfaceView) return view
         if (view is ViewGroup) for (i in 0 until view.childCount) {
             sourceView(view.getChildAt(i))?.let { return it }
         }

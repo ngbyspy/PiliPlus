@@ -6,6 +6,8 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.view.SurfaceHolder
 import android.view.MotionEvent
 import android.view.PixelCopy
 import android.view.View
@@ -49,6 +51,7 @@ import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.kyant.backdrop.catalog.components.LiquidBottomTabs
 import io.flutter.embedding.android.FlutterSurfaceView
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener
 import io.flutter.plugin.common.MethodChannel
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -71,7 +74,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val height: Float, val dpr: Float, val selected: Int, val items: List<Item>,
         val dark: Boolean, val tint: Int, val foreground: Int, val opacity: Float,
         val blurRadius: Float,
-        val fontScale: Float, val visible: Boolean
+        val fontScale: Float, val visible: Boolean, val fallback: Boolean
     )
 
     private class Owner : LifecycleOwner, SavedStateRegistryOwner {
@@ -85,11 +88,15 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             registry.currentState = Lifecycle.State.RESUMED
         }
         fun destroy() { registry.currentState = Lifecycle.State.DESTROYED }
+        fun active(value: Boolean) {
+            registry.currentState = if (value) Lifecycle.State.RESUMED else Lifecycle.State.CREATED
+        }
     }
 
     private val messenger = engine.dartExecutor.binaryMessenger
     private val channel = MethodChannel(messenger, CHANNEL)
     private val handler = Handler(Looper.getMainLooper())
+    private val renderer = engine.renderer
     private val owner = Owner()
     private var config by mutableStateOf<Config?>(null)
     private var image by mutableStateOf<ImageBitmap?>(null, neverEqualPolicy())
@@ -106,11 +113,52 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
     private var generation = 0
     private var errors = 0
     private var resumed = true
+    private var focused = activity.hasWindowFocus()
+    private var flutterDisplayed = renderer.isDisplayingFlutterUi
+    private var fallbackActive = false
+    private var awaitingCleanScene = false
+    private var cleanEpoch = 0L
+    private var source: FlutterSurfaceView? = null
+    private var retryUntil = 0L
+    private var captureNotBefore = 0L
+    private var retryScheduled = false
     private var disposed = false
+
+    private val retry = Runnable {
+        retryScheduled = false
+        invalidate()
+    }
+    private val surfaceCallback = object : SurfaceHolder.Callback {
+        override fun surfaceCreated(holder: SurfaceHolder) = surfaceChanged(holder, 0, 0, 0)
+        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            generation++
+            beginRecovery()
+            invalidate()
+        }
+        override fun surfaceDestroyed(holder: SurfaceHolder) {
+            generation++
+            root?.visibility = View.GONE
+            cancelRetry()
+        }
+    }
+    private val displayListener = object : FlutterUiDisplayListener {
+        override fun onFlutterUiDisplayed() {
+            flutterDisplayed = true
+            beginRecovery()
+            invalidate()
+        }
+        override fun onFlutterUiNoLongerDisplayed() {
+            flutterDisplayed = false
+            generation++
+            root?.visibility = View.GONE
+            cancelRetry()
+        }
+    }
 
     init {
         current?.dispose()
         current = this
+        renderer.addIsDisplayingFlutterUiListener(displayListener)
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "isSupported" -> result.success(true)
@@ -151,10 +199,19 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             items, args["dark"] == true, (args["tint"] as Number).toInt(),
             (args["foreground"] as Number).toInt(), n("opacity", .4f).coerceIn(0f, 1f),
             n("blurRadius", 8f).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
-            n("fontScale", 1f), args["visible"] == true
+            n("fontScale", 1f), args["visible"] == true, args["fallback"] == true
         )
+        if (awaitingCleanScene && !next.fallback &&
+            (args["readyEpoch"] as? Number)?.toLong() == cleanEpoch) {
+            awaitingCleanScene = false
+        }
         if (next.width <= 0 || next.height <= 0) { hide(); return }
-        if (config?.owner != next.owner) { generation++; image = null; errors = 0 }
+        if (config?.owner != next.owner) {
+            generation++; image = null; errors = 0; fallbackActive = false
+            awaitingCleanScene = false
+            beginRecovery()
+        }
+        if (config?.visible != true && next.visible) beginRecovery()
         config = next
         if (!next.visible) hide() else invalidate()
     }
@@ -198,21 +255,29 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
 
     private fun invalidate() {
         val c = config ?: return
-        if (disposed || !resumed || !c.visible) return
+        if (disposed || !resumed || !focused || !c.visible || awaitingCleanScene) return
+        if (fallbackActive && SystemClock.uptimeMillis() < captureNotBefore) return
         dirty = true
         if (scheduled || copying) return
         scheduled = true
         activity.window.decorView.postOnAnimation {
             scheduled = false
-            if (!disposed && resumed && dirty && config?.visible == true) capture()
+            if (!disposed && resumed && focused && dirty && config?.visible == true) capture()
         }
     }
 
     private fun capture() {
         val c = config ?: return
         val source = sourceView(activity.window.decorView)
-        if (source == null || !source.holder.surface.isValid) {
-            fail("Flutter surface is unavailable")
+        if (this.source !== source) {
+            this.source?.holder?.removeCallback(surfaceCallback)
+            this.source = source
+            source?.holder?.addCallback(surfaceCallback)
+            generation++
+        }
+        if (source == null || !flutterDisplayed || !source.holder.surface.isValid ||
+            source.width <= 0 || source.height <= 0) {
+            waitForSurface()
             return
         }
         val margin = ceil(c.height * .45f).toInt()
@@ -258,18 +323,64 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         try {
             PixelCopy.request(source, rect, bitmap, { status ->
                 copying = false
-                if (!disposed && captureGeneration == generation && config?.visible == true && resumed) {
+                if (!disposed && captureGeneration == generation && config?.visible == true && resumed && focused) {
                     if (status == PixelCopy.SUCCESS) {
                         errors = 0
-                        image = bitmap.asImageBitmap()
-                        frame.visibility = View.VISIBLE
+                        cancelRetry()
+                        if (fallbackActive || c.fallback) {
+                            // Flutter removes its temporary fallback first. Only the next
+                            // submitted scene is safe to sample/display: it excludes that bar.
+                            fallbackActive = false
+                            awaitingCleanScene = true
+                            cleanEpoch++
+                            channel.invokeMethod("availability", mapOf("owner" to config?.owner, "ready" to true, "epoch" to cleanEpoch))
+                        } else {
+                            image = bitmap.asImageBitmap()
+                            frame.visibility = View.VISIBLE
+                        }
+                    } else if (status == PixelCopy.ERROR_SOURCE_NO_DATA ||
+                        status == PixelCopy.ERROR_SOURCE_INVALID || status == PixelCopy.ERROR_TIMEOUT) {
+                        waitForSurface()
                     } else fail("PixelCopy status " + status)
                 }
                 if (dirty) invalidate()
             }, handler)
+        } catch (_: IllegalArgumentException) {
+            copying = false
+            // Surface validity may change between the check and PixelCopy.request.
+            waitForSurface()
         } catch (_: RuntimeException) {
             copying = false
             fail("PixelCopy request failed")
+        }
+    }
+
+    private fun beginRecovery() {
+        errors = 0
+        captureNotBefore = 0L
+        retryUntil = SystemClock.uptimeMillis() + 3000L
+    }
+
+    private fun cancelRetry() {
+        handler.removeCallbacks(retry)
+        retryScheduled = false
+    }
+
+    private fun waitForSurface() {
+        dirty = false
+        root?.visibility = View.GONE
+        if (!resumed || !focused || disposed || config?.visible != true) return
+        if (!fallbackActive) {
+            fallbackActive = true
+            channel.invokeMethod("availability", mapOf("owner" to config?.owner, "ready" to false))
+        }
+        val now = SystemClock.uptimeMillis()
+        captureNotBefore = now + if (now < retryUntil) 100L else 1000L
+        // Bounded warm-up only. Afterwards surface/display/scene events wake us;
+        // there is no background or perpetual idle polling.
+        if (!retryScheduled && SystemClock.uptimeMillis() < retryUntil) {
+            retryScheduled = true
+            handler.postDelayed(retry, 100L)
         }
     }
 
@@ -291,18 +402,37 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         config = config?.copy(visible = false)
         generation++
         dirty = false
+        cancelRetry()
+        awaitingCleanScene = false
         root?.visibility = View.GONE
         image = null
         buffers = emptyList()
         crop = Rect()
     }
 
-    fun pause() { resumed = false; generation++; root?.visibility = View.GONE }
-    fun resume() { resumed = true; invalidate() }
+    fun pause() {
+        owner.active(false)
+        resumed = false; generation++; root?.visibility = View.GONE; cancelRetry()
+    }
+    fun resume() {
+        owner.active(focused)
+        resumed = true; beginRecovery(); invalidate()
+    }
+    fun focusChanged(hasFocus: Boolean) {
+        focused = hasFocus
+        owner.active(hasFocus && resumed)
+        generation++
+        root?.visibility = View.GONE
+        cancelRetry()
+        if (hasFocus) { beginRecovery(); invalidate() }
+    }
 
     fun dispose() {
         if (disposed) return
         disposed = true
+        cancelRetry()
+        renderer.removeIsDisplayingFlutterUiListener(displayListener)
+        source?.holder?.removeCallback(surfaceCallback)
         generation++
         root?.let { (it.parent as? ViewGroup)?.removeView(it) }
         compose?.disposeComposition()
@@ -399,4 +529,3 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         }
     }
 }
-

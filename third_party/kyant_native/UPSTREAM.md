@@ -39,7 +39,12 @@ capturing that fallback during handover. Late PixelCopy callbacks are discarded.
 No polling runs in the background; after warm-up only actual scene/surface events
 retry, with throttling. Compose lifecycle pauses with the activity/focus.
 
-The selected thumb now samples the exported frosted track material at rest and
-cross-fades to the clear source while pressed. Its foreground glyph layer is
-separate, preserving sharp text/icons and the original native lens/highlight
-animations. Fully idle/pressed paths avoid the cross-fade save-layer allocation.
+The selected thumb always samples the finished track material. Its own extra
+blur/tint is exported separately, then combined with sharp foreground glyphs
+before the original native lens/highlight animation. Pressing reduces only the
+thumb's extra blur/tint to zero; it exposes the track, never the raw page.
+Track blur/tint are unchanged by pressing. Four independent appearance sliders
+retain existing track preferences, add thumb clarity (default90%, old0.1 tint)
+and additional blur (default16dp, 0..32dp). The stronger thumb blur samples a
+bounded crop with padding derived from the configured combined blur, without
+resizing buffers during native press animation or partial scrolling.

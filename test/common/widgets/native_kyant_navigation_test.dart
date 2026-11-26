@@ -9,12 +9,18 @@ void main() {
   final selections = <int>[];
   var supported = true;
   var blur = .5;
+  var clarity = .6;
+  var buttonClarity = .9;
+  var buttonBlur = .5;
   setUp(() {
     WidgetsBinding.instance.handleAppLifecycleStateChanged(
       AppLifecycleState.resumed,
     );
     supported = true;
     blur = .5;
+    clarity = .6;
+    buttonClarity = .9;
+    buttonBlur = .5;
     calls.clear();
     selections.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -36,8 +42,10 @@ void main() {
     selectedIndex: 0,
     onSelected: selections.add,
     fallback: const Text('original navigation'),
-    clarity: .6,
+    clarity: clarity,
     blur: blur,
+    buttonClarity: buttonClarity,
+    buttonBlur: buttonBlur,
   );
   Widget host(Widget child) => MaterialApp(
     navigatorObservers: [KyantNavigationRoutes.instance],
@@ -84,6 +92,8 @@ void main() {
       expect((config['items'] as List)[1]['badge'], '3');
       expect(config['opacity'], closeTo(.4, .0001));
       expect(config['blurRadius'], 8);
+      expect(config['buttonOpacity'], closeTo(.1, .0001));
+      expect(config['buttonBlurRadius'], 16);
       expect(find.text('original navigation'), findsNothing);
       await emit({'owner': -1, 'id': 'home'});
       expect(selections, isEmpty);
@@ -159,6 +169,33 @@ void main() {
     Navigator.of(context).pop();
     await tester.pumpAndSettle();
     expect(calls.lastWhere((c) => c.method == 'update').method, 'update');
+    await close(tester);
+  });
+
+  testWidgets('bar and button material values cross the bridge independently', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    Map config() =>
+        calls.lastWhere((c) => c.method == 'update').arguments as Map;
+    clarity = .1;
+    blur = .2;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['opacity'], closeTo(.9, .0001));
+    expect(config()['blurRadius'], closeTo(3.2, .0001));
+    expect(config()['buttonOpacity'], closeTo(.1, .0001));
+    expect(config()['buttonBlurRadius'], 16);
+    buttonClarity = .2;
+    buttonBlur = 1;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['buttonOpacity'], closeTo(.8, .0001));
+    expect(config()['buttonBlurRadius'], 32);
+    expect(config()['opacity'], closeTo(.9, .0001));
+    expect(config()['blurRadius'], closeTo(3.2, .0001));
+    expect(selections, isEmpty);
     await close(tester);
   });
 

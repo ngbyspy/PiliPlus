@@ -29,12 +29,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.GraphicsLayerScope
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -73,6 +67,8 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     surfaceOpacity: Float = 0.4f,
     blurRadius: Float = 8f,
+    buttonOpacity: Float = 0.1f,
+    buttonBlurRadius: Float = 16f,
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
     onTabReselected: ((Int) -> Unit)? = null,
@@ -88,6 +84,7 @@ fun LiquidBottomTabs(
 
     val tabsBackdrop = rememberLayerBackdrop()
     val materialBackdrop = rememberLayerBackdrop()
+    val buttonBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier,
@@ -184,10 +181,6 @@ fun LiquidBottomTabs(
             )
         }
 
-        val selectedBackdrop = remember(backdrop, materialBackdrop, dampedDragAnimation) {
-            PressBackdrop(backdrop, materialBackdrop) { dampedDragAnimation.pressProgress }
-        }
-
         Row(
             Modifier
                 .graphicsLayer {
@@ -216,6 +209,37 @@ fun LiquidBottomTabs(
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content
+        )
+
+        // The button's own material is applied to the finished BAR material,
+        // never to the raw page. At full press its blur/tint disappear, exposing
+        // the bar unchanged. Export before adding glyphs so they stay sharp.
+        Box(
+            Modifier
+                .clearAndSetSemantics {}
+                .alpha(0f)
+                .graphicsLayer { translationX = panelOffset }
+                .drawBackdrop(
+                    backdrop = materialBackdrop,
+                    exportedBackdrop = buttonBackdrop,
+                    shape = { Capsule() },
+                    effects = {
+                        val weight = (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
+                        val radius = buttonBlurRadius * weight
+                        if (radius > 0f) blur(radius.dp.toPx())
+                    },
+                    highlight = null,
+                    shadow = null,
+                    onDrawSurface = {
+                        val weight = (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
+                        drawRect(
+                            if (isLightTheme) Color.Black else Color.White,
+                            alpha = buttonOpacity * weight
+                        )
+                    }
+                )
+                .height(64f.dp)
+                .fillMaxWidth()
         )
 
         CompositionLocalProvider(
@@ -252,7 +276,7 @@ fun LiquidBottomTabs(
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(selectedBackdrop, tabsBackdrop),
+                    backdrop = rememberCombinedBackdrop(buttonBackdrop, tabsBackdrop),
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
@@ -283,52 +307,10 @@ fun LiquidBottomTabs(
                         val velocity = dampedDragAnimation.velocity / 10f
                         scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
                         scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
-                    },
-                    onDrawSurface = {
-                        val progress = dampedDragAnimation.pressProgress
-                        drawRect(
-                            if (isLightTheme) Color.Black.copy(0.1f)
-                            else Color.White.copy(0.1f),
-                            alpha = 1f - progress
-                        )
-                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
                     }
                 )
                 .height(56f.dp)
                 .fillMaxWidth(1f / tabsCount)
         )
-    }
-}
-
-// Cross-fade the background material only. The foreground tab layer is combined
-// afterwards, so icons/text remain sharp in both states and retain native lensing.
-private class PressBackdrop(
-    private val clear: Backdrop,
-    private val frosted: Backdrop,
-    private val progress: () -> Float
-) : Backdrop {
-    override val isCoordinatesDependent = true
-    private val paint = Paint()
-
-    override fun DrawScope.drawBackdrop(
-        density: Density,
-        coordinates: LayoutCoordinates?,
-        layerBlock: (GraphicsLayerScope.() -> Unit)?
-    ) {
-        val frost = (1f - progress()).coerceIn(0f, 1f)
-        if (frost == 1f) {
-            with(frosted) { drawBackdrop(density, coordinates, layerBlock) }
-            return
-        }
-        with(clear) { drawBackdrop(density, coordinates, layerBlock) }
-        if (frost > 0f) {
-            paint.alpha = frost
-            drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
-            try {
-                with(frosted) { drawBackdrop(density, coordinates, layerBlock) }
-            } finally {
-                drawContext.canvas.restore()
-            }
-        }
     }
 }

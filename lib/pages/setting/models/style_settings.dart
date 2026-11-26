@@ -164,8 +164,9 @@ List<SettingsModel> get styleSettings => [
     ),
   if (Platform.isAndroid && ui.ImageFilter.isShaderFilterSupported)
     WidgetModel(
-      title: '玻璃通透程度',
+      title: '底栏玻璃材质',
       builder: (_) => GlassClaritySetting(
+        key: const ValueKey('bar-glass-setting'),
         value: Pref.androidGlassClarity,
         blurValue: Pref.androidGlassBlur,
         onBlurChanged: (value) {
@@ -186,6 +187,32 @@ List<SettingsModel> get styleSettings => [
           SettingBoxKey.androidGlassClarity,
           value,
         ),
+      ),
+    ),
+  if (Platform.isAndroid)
+    WidgetModel(
+      title: '按钮玻璃材质（原生）',
+      builder: (_) => GlassClaritySetting(
+        key: const ValueKey('button-glass-setting'),
+        isButton: true,
+        value: Pref.androidGlassButtonClarity,
+        blurValue: Pref.androidGlassButtonBlur,
+        onChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassButtonClarity.value = value;
+          }
+        },
+        onSaved: (value) => GStorage.setting.put(
+          SettingBoxKey.androidGlassButtonClarity,
+          value,
+        ),
+        onBlurChanged: (value) {
+          if (Get.isRegistered<MainController>()) {
+            Get.find<MainController>().androidGlassButtonBlur.value = value;
+          }
+        },
+        onBlurSaved: (value) =>
+            GStorage.setting.put(SettingBoxKey.androidGlassButtonBlur, value),
       ),
     ),
   if (Platform.isAndroid)

@@ -162,6 +162,8 @@ abstract final class SettingBoxKey {
       androidLiquidGlassNavigation = 'androidLiquidGlassNavigation',
       androidGlassClarity = 'androidGlassClarity',
       androidGlassBlur = 'androidGlassBlur',
+      androidGlassButtonClarity = 'androidGlassButtonClarity',
+      androidGlassButtonBlur = 'androidGlassButtonBlur',
       androidNativeKyantNavigation = 'androidNativeKyantNavigation',
       removeSafeArea = 'removeSafeArea',
       angleDegrees = 'angleDegrees',

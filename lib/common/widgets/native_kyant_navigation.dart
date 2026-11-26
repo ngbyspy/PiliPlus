@@ -46,6 +46,8 @@ class NativeKyantNavigationBar extends StatefulWidget {
     required this.fallback,
     required this.clarity,
     this.blur = GlassAppearance.defaultBlur,
+    this.buttonClarity = GlassAppearance.defaultButtonClarity,
+    this.buttonBlur = GlassAppearance.defaultBlur,
   });
   static const channelName = 'com.ngbyspy.piliplus/kyant_navigation';
   final List<KyantDestination> items;
@@ -54,6 +56,8 @@ class NativeKyantNavigationBar extends StatefulWidget {
   final Widget fallback;
   final double clarity;
   final double blur;
+  final double buttonClarity;
+  final double buttonBlur;
   @override
   State<NativeKyantNavigationBar> createState() =>
       _NativeKyantNavigationBarState();
@@ -185,6 +189,12 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
       'foreground': colors.onSurface.toARGB32(),
       'opacity': 1 - widget.clarity.clamp(0.0, 1.0),
       'blurRadius': GlassAppearance.nativeBlurRadius(widget.blur),
+      'buttonOpacity': GlassAppearance.buttonSurfaceOpacity(
+        widget.buttonClarity,
+      ),
+      'buttonBlurRadius': GlassAppearance.nativeButtonBlurRadius(
+        widget.buttonBlur,
+      ),
       'fontScale': MediaQuery.textScalerOf(context).scale(12) / 12,
       'visible': true,
       'fallback': _waiting,

@@ -1118,6 +1118,15 @@ abstract final class Pref {
     _setting.get(SettingBoxKey.androidGlassBlur),
   );
 
+  static double get androidGlassButtonClarity =>
+      GlassAppearance.normalizeButtonClarity(
+        _setting.get(SettingBoxKey.androidGlassButtonClarity),
+      );
+
+  static double get androidGlassButtonBlur => GlassAppearance.normalizeBlur(
+    _setting.get(SettingBoxKey.androidGlassButtonBlur),
+  );
+
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
 

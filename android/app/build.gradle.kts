@@ -151,6 +151,7 @@ flutter {
 // Experimental only on spy/dev. The preserved Flutter renderer remains in use.
 dependencies {
     implementation("io.github.kyant0:backdrop:2.0.1")
+    implementation("io.github.kyant0:shapes:1.2.1")
     implementation("org.jetbrains.compose.foundation:foundation:1.12.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.0")
 }

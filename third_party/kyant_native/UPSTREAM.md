@@ -62,16 +62,3 @@ earlier light/dark defaults. The original thumb lens/highlight/spring formulas
 are retained. PixelCopy buffers remain fixed-size during press/partial scrolling;
 no new capture loop or dependency/SDK upgrade. The r12 repair awaits user visual
 acceptance; compile/tests are not a native optics/performance pass.
-
-Source-only follow-up after r12: the user confirms duplicate silhouettes are
-gone but the pressed track outline magnifies. Capturing the actual enlarged
-track without an independent sampling scale lost the inset-material appearance.
-The material capture now shrinks around the thumb center from 1 to 56/78 as
-press progresses, using the inverse of the existing 78/56 thumb expansion.
-The page remains unscaled underneath to preserve an opaque scene, and glyphs
-are added after material processing so their native animation is unchanged.
-Both the blurred and clear paths use this same material mapping. The pivot
-comes from actual thumb layout bounds, never the padded blur working buffer.
-The native convex lens and displayed bar geometry are unchanged. This change
-has numerical/source checks only; the user explicitly requested NO compilation
-or new package, so the existing r12 APK does not contain it.

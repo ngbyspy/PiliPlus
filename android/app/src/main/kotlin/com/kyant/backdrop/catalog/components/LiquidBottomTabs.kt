@@ -41,6 +41,7 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.utils.DampedDragAnimation
 import com.kyant.backdrop.catalog.utils.InteractiveHighlight
@@ -58,8 +59,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
-
-private const val PressedTabScale = 78f / 56f
 
 @Composable
 fun LiquidBottomTabs(
@@ -124,7 +123,7 @@ fun LiquidBottomTabs(
                 valueRange = 0f..(tabsCount - 1).toFloat(),
                 visibilityThreshold = 0.001f,
                 initialScale = 1f,
-                pressedScale = PressedTabScale,
+                pressedScale = 78f / 56f,
                 onDragStarted = { pointerTravel[0] = 0f },
                 onDragStopped = {
                     val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
@@ -256,16 +255,8 @@ fun LiquidBottomTabs(
         // This makes the sampled scene opaque: refracting a transparent capsule
         // over the visible bar would expose its unrefracted silhouette as well.
         val buttonBackdrop = rememberButtonBackdrop(
-            page = backdrop,
-            material = materialBackdrop,
+            scene = rememberCombinedBackdrop(backdrop, materialBackdrop),
             foreground = tabsBackdrop,
-            materialScale = {
-                // Grow the button while minifying only its view of the bar.
-                // Sampling the enlarged bar at 1:1 made the native convex rim
-                // magnify its silhouette rather than showing an inset contour.
-                lerp(1f, 1f / PressedTabScale,
-                    dampedDragAnimation.pressProgress.coerceIn(0f, 1f))
-            },
             blurRadius = {
                 buttonBlurRadius * (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
             },

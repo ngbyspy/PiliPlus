@@ -1,3 +1,20 @@
+import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:hive_ce/hive.dart';
+
+enum GlassTint {
+  automatic('自动'),
+  white('白色'),
+  black('黑色');
+
+  const GlassTint(this.label);
+  final String label;
+
+  static GlassTint fromPreference(Object? value) => values.firstWhere(
+    (tint) => tint.name == value,
+    orElse: () => automatic,
+  );
+}
+
 abstract final class GlassAppearance {
   // Retain the accepted 0.4 track tint when no preference has been saved.
   static const defaultClarity = 0.6;
@@ -16,4 +33,21 @@ abstract final class GlassAppearance {
   // The midpoint preserves each renderer's accepted blur exactly.
   static double nativeBlurRadius(Object? value) => 16 * normalizeBlur(value);
   static double flutterBlurSigma(Object? value) => 4 * normalizeBlur(value);
+
+  // Snapshot the previous shared values once. Subsequent bar changes must not
+  // move the button sliders, including after restarting or importing settings.
+  // These are additive preferences; r13 continues to read its original keys.
+  static Future<void> initializeNativeControls(Box<dynamic> settings) async {
+    final initial = <String, Object>{
+      if (!settings.containsKey(SettingBoxKey.androidGlassButtonClarity))
+        SettingBoxKey.androidGlassButtonClarity: normalize(
+          settings.get(SettingBoxKey.androidGlassClarity),
+        ),
+      if (!settings.containsKey(SettingBoxKey.androidGlassButtonBlur))
+        SettingBoxKey.androidGlassButtonBlur: normalizeBlur(
+          settings.get(SettingBoxKey.androidGlassBlur),
+        ),
+    };
+    if (initial.isNotEmpty) await settings.putAll(initial);
+  }
 }

@@ -218,6 +218,10 @@ class _MainAppState extends PopScopeState<MainApp>
             return NativeKyantNavigationBar(
               clarity: _mainController.androidGlassClarity.value,
               blur: _mainController.androidGlassBlur.value,
+              buttonClarity: _mainController.androidGlassButtonClarity.value,
+              buttonBlur: _mainController.androidGlassButtonBlur.value,
+              barTint: _mainController.androidGlassBarTint.value,
+              buttonTint: _mainController.androidGlassButtonTint.value,
               selectedIndex: _mainController.selectedIndex.value,
               onSelected: _mainController.setIndex,
               fallback: _mainController.androidLiquidGlassNavigation.value

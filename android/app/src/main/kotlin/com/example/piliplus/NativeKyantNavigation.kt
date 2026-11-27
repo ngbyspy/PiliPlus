@@ -74,6 +74,8 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val height: Float, val dpr: Float, val selected: Int, val items: List<Item>,
         val dark: Boolean, val tint: Int, val foreground: Int, val opacity: Float,
         val blurRadius: Float,
+        val buttonOpacity: Float, val buttonBlurRadius: Float,
+        val barTint: Int, val buttonTint: Int,
         val fontScale: Float, val visible: Boolean, val fallback: Boolean
     )
 
@@ -199,6 +201,9 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             items, args["dark"] == true, (args["tint"] as Number).toInt(),
             (args["foreground"] as Number).toInt(), n("opacity", .4f).coerceIn(0f, 1f),
             n("blurRadius", 8f).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
+            n("buttonOpacity", n("opacity", .4f)).let { if (it.isFinite()) it.coerceIn(0f, 1f) else .4f },
+            n("buttonBlurRadius", n("blurRadius", 8f)).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
+            n("barTint").toInt().coerceIn(0, 2), n("buttonTint").toInt().coerceIn(0, 2),
             n("fontScale", 1f), args["visible"] == true, args["fallback"] == true
         )
         if (awaitingCleanScene && !next.fallback &&
@@ -471,6 +476,8 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
                     modifier = Modifier.offset { IntOffset(barX.roundToInt(), barY.roundToInt()) }
                         .size((c.width / density).dp, 64.dp),
                     surfaceOpacity = c.opacity, blurRadius = c.blurRadius,
+                    buttonSurfaceOpacity = c.buttonOpacity, buttonBlurRadius = c.buttonBlurRadius,
+                    barTint = c.barTint, buttonTint = c.buttonTint,
                     darkTheme = c.dark, accent = Color(c.tint)
                 ) {
                     c.items.forEachIndexed { index, item ->

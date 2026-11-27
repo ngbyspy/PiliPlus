@@ -11,6 +11,10 @@ class GlassClaritySetting extends StatefulWidget {
     this.blurValue = GlassAppearance.defaultBlur,
     this.onBlurChanged,
     this.onBlurSaved,
+    this.title = '玻璃',
+    this.showPreview = true,
+    this.tint = GlassTint.automatic,
+    this.onTintChanged,
   });
 
   final double value;
@@ -19,6 +23,10 @@ class GlassClaritySetting extends StatefulWidget {
   final double blurValue;
   final ValueChanged<double>? onBlurChanged;
   final ValueChanged<double>? onBlurSaved;
+  final String title;
+  final bool showPreview;
+  final GlassTint tint;
+  final ValueChanged<GlassTint>? onTintChanged;
 
   @override
   State<GlassClaritySetting> createState() => _GlassClaritySettingState();
@@ -29,6 +37,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
   bool _dirty = false;
   late double _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
   bool _blurDirty = false;
+  late GlassTint _tint = widget.tint;
 
   void _changeBlur(double value) {
     final normalized = GlassAppearance.normalizeBlur(value);
@@ -67,6 +76,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
     if (oldWidget.blurValue != widget.blurValue && !_blurDirty) {
       _blurValue = GlassAppearance.normalizeBlur(widget.blurValue);
     }
+    if (oldWidget.tint != widget.tint) _tint = widget.tint;
   }
 
   void _reset() {
@@ -96,7 +106,10 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
               Icon(Icons.opacity, color: colors.onSurfaceVariant),
               const SizedBox(width: 16),
               Expanded(
-                child: Text('玻璃通透程度', style: TextTheme.of(context).titleMedium),
+                child: Text(
+                  '${widget.title}通透程度',
+                  style: TextTheme.of(context).titleMedium,
+                ),
               ),
               Text('${(_value * 100).round()}%'),
               IconButton(
@@ -108,97 +121,104 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
               ),
             ],
           ),
-          ExcludeSemantics(
-            child: IgnorePointer(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  height: 96,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Row(
-                        children: [
-                          for (final color in const [
-                            Color(0xFF9DDCF4),
-                            Color(0xFFF2D28A),
-                            Color(0xFFE6B1CF),
-                          ])
-                            Expanded(
-                              child: ColoredBox(
-                                color: color,
-                                child: const Center(
-                                  child: Text(
-                                    'Aa',
-                                    style: TextStyle(
-                                      color: Color(0xFF3B3442),
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w700,
+          if (widget.showPreview)
+            ExcludeSemantics(
+              child: IgnorePointer(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 96,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Row(
+                          children: [
+                            for (final color in const [
+                              Color(0xFF9DDCF4),
+                              Color(0xFFF2D28A),
+                              Color(0xFFE6B1CF),
+                            ])
+                              Expanded(
+                                child: ColoredBox(
+                                  color: color,
+                                  child: const Center(
+                                    child: Text(
+                                      'Aa',
+                                      style: TextStyle(
+                                        color: Color(0xFF3B3442),
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: ReducedTransparencyScope(
-                            reduceTransparency: MediaQuery.highContrastOf(
-                              context,
-                            ),
-                            child: GlassTheme(
-                              data: GlassThemeData(
-                                menuSurface: colors.surface,
-                                fallbackSurface: colors.surface,
+                          ],
+                        ),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: ReducedTransparencyScope(
+                              reduceTransparency: MediaQuery.highContrastOf(
+                                context,
                               ),
-                              child: GlassSegmentedControl<String>(
-                                height: 64,
-                                inset: 4,
-                                blurSigma: GlassAppearance.flutterBlurSigma(
-                                  _blurValue,
+                              child: GlassTheme(
+                                data: GlassThemeData(
+                                  menuSurface: colors.surface,
+                                  fallbackSurface: colors.surface,
                                 ),
-                                surfaceOpacity: GlassAppearance.surfaceOpacity(
-                                  _value,
-                                ),
-                                selected: 'home',
-                                segments: const [
-                                  GlassSegment(value: 'home', label: '首页'),
-                                  GlassSegment(value: 'dynamics', label: '动态'),
-                                  GlassSegment(value: 'mine', label: '我的'),
-                                ],
-                                itemBuilder: (_, segment, active) => Icon(
-                                  switch (segment.value) {
-                                    'home' =>
-                                      active ? Icons.home : Icons.home_outlined,
-                                    'dynamics' =>
-                                      Icons.motion_photos_on_outlined,
-                                    _ => Icons.person_outline,
-                                  },
-                                  size: 23,
-                                  color: active
-                                      ? colors.primary
-                                      : colors.onSurface,
+                                child: GlassSegmentedControl<String>(
+                                  height: 64,
+                                  inset: 4,
+                                  blurSigma: GlassAppearance.flutterBlurSigma(
+                                    _blurValue,
+                                  ),
+                                  surfaceOpacity:
+                                      GlassAppearance.surfaceOpacity(
+                                        _value,
+                                      ),
+                                  selected: 'home',
+                                  segments: const [
+                                    GlassSegment(value: 'home', label: '首页'),
+                                    GlassSegment(
+                                      value: 'dynamics',
+                                      label: '动态',
+                                    ),
+                                    GlassSegment(value: 'mine', label: '我的'),
+                                  ],
+                                  itemBuilder: (_, segment, active) => Icon(
+                                    switch (segment.value) {
+                                      'home' =>
+                                        active
+                                            ? Icons.home
+                                            : Icons.home_outlined,
+                                      'dynamics' =>
+                                        Icons.motion_photos_on_outlined,
+                                      _ => Icons.person_outline,
+                                    },
+                                    size: 23,
+                                    color: active
+                                        ? colors.primary
+                                        : colors.onSurface,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           Slider(
             key: const ValueKey('glass-clarity-slider'),
             value: _value,
             divisions: 100,
             label: '${(_value * 100).round()}%',
             semanticFormatterCallback: (value) =>
-                '玻璃通透程度 ${(value * 100).round()}%',
+                '${widget.title}通透程度 ${(value * 100).round()}%',
             onChanged: _change,
             onChangeEnd: _save,
           ),
@@ -214,7 +234,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    '玻璃模糊程度',
+                    '${widget.title}模糊程度',
                     style: TextTheme.of(context).titleMedium,
                   ),
                 ),
@@ -237,7 +257,7 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
               divisions: 100,
               label: '${(_blurValue * 100).round()}%',
               semanticFormatterCallback: (value) =>
-                  '玻璃模糊程度 ${(value * 100).round()}%',
+                  '${widget.title}模糊程度 ${(value * 100).round()}%',
               onChanged: _changeBlur,
               onChangeEnd: _saveBlur,
             ),
@@ -246,6 +266,24 @@ class _GlassClaritySettingState extends State<GlassClaritySetting> {
               children: [Text('清晰'), Text('柔和')],
             ),
             const Text('0% 关闭背景模糊，折射与高光保留；50% 为默认效果'),
+          ],
+          if (widget.onTintChanged != null) ...[
+            const SizedBox(height: 12),
+            Text('${widget.title}底色'),
+            const SizedBox(height: 8),
+            SegmentedButton<GlassTint>(
+              showSelectedIcon: false,
+              segments: [
+                for (final tint in GlassTint.values)
+                  ButtonSegment(value: tint, label: Text(tint.label)),
+              ],
+              selected: {_tint},
+              onSelectionChanged: (selection) {
+                final tint = selection.single;
+                setState(() => _tint = tint);
+                widget.onTintChanged!(tint);
+              },
+            ),
           ],
         ],
       ),

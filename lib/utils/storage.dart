@@ -8,6 +8,7 @@ import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/accounts/account_adapter.dart';
 import 'package:PiliPlus/utils/accounts/account_type_adapter.dart';
 import 'package:PiliPlus/utils/accounts/cookie_jar_adapter.dart';
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/player_volume.dart';
 import 'package:PiliPlus/utils/set_int_adapter.dart';
@@ -66,6 +67,7 @@ abstract final class GStorage {
     ]);
 
     await PlayerVolume.migrate(setting);
+    await GlassAppearance.initializeNativeControls(setting);
 
     if (Pref.saveReply) {
       reply = await Hive.openBox<Uint8List>(
@@ -97,6 +99,7 @@ abstract final class GStorage {
       setting.clear().then((_) async {
         await setting.putAll(map[setting.name]);
         await PlayerVolume.migrate(setting);
+        await GlassAppearance.initializeNativeControls(setting);
       }),
       video.clear().then((_) => video.putAll(map[video.name])),
     ]);

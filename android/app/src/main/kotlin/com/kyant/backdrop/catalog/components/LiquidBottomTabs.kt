@@ -67,6 +67,10 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     surfaceOpacity: Float = 0.4f,
     blurRadius: Float = 8f,
+    buttonSurfaceOpacity: Float = surfaceOpacity,
+    buttonBlurRadius: Float = blurRadius,
+    barTint: Int = 0,
+    buttonTint: Int = 0,
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
     onTabReselected: ((Int) -> Unit)? = null,
@@ -76,9 +80,16 @@ fun LiquidBottomTabs(
     val accentColor = accent ?: 
         if (isLightTheme) Color(0xFF0088FF)
         else Color(0xFF0091FF)
-    val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(surfaceOpacity)
-        else Color(0xFF121212).copy(surfaceOpacity)
+    fun tintColor(choice: Int, automatic: Color): Color = when (choice) {
+        1 -> Color.White
+        2 -> Color.Black
+        else -> automatic
+    }
+    val automaticContainer = if (isLightTheme) Color(0xFFFAFAFA) else Color(0xFF121212)
+    val containerColor = tintColor(barTint, automaticContainer).copy(surfaceOpacity)
+    val buttonContainerColor = tintColor(buttonTint, automaticContainer).copy(buttonSurfaceOpacity)
+    val buttonOverlayColor = tintColor(buttonTint, if (isLightTheme) Color.Black else Color.White)
+    val buttonPressedColor = tintColor(buttonTint, Color.Black)
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -225,7 +236,7 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            if (blurRadius > 0f) blur(blurRadius.dp.toPx())
+                            if (buttonBlurRadius > 0f) blur(buttonBlurRadius.dp.toPx())
                             lens(
                                 24f.dp.toPx() * progress,
                                 24f.dp.toPx() * progress
@@ -235,7 +246,7 @@ fun LiquidBottomTabs(
                             val progress = dampedDragAnimation.pressProgress
                             Highlight.Default.copy(alpha = progress)
                         },
-                        onDrawSurface = { drawRect(containerColor) }
+                        onDrawSurface = { drawRect(buttonContainerColor) }
                     )
                     .then(interactiveHighlight.modifier)
                     .height(56f.dp)
@@ -293,11 +304,10 @@ fun LiquidBottomTabs(
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
                         drawRect(
-                            if (isLightTheme) Color.Black.copy(0.1f)
-                            else Color.White.copy(0.1f),
+                            buttonOverlayColor.copy(0.1f),
                             alpha = 1f - progress
                         )
-                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                        drawRect(buttonPressedColor.copy(alpha = 0.03f * progress))
                     }
                 )
                 .height(56f.dp)

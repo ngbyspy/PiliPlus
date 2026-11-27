@@ -107,6 +107,31 @@ floor/ceil/round取整、surface实际尺寸/定位及PixelCopy时延仍有运�
 
 复查命令：`git diff d811063d8 d36f252fc -- android/app/src/main/kotlin/com/kyant/backdrop/catalog/components/LiquidBottomTabs.kt`；其余相邻版本同理。本地保存原版→r12、r12→修正、原版→修正完整diff。仍用Compose或保留lens数字，不等于未经改写的原版。
 
+## 圆角变直角的历史定位：r8 → r9
+
+用户随后提供当时聊天截图，指出“最初圆角，修改后变直角”。本次据此重新查看本地原始 `r8-held.png`、`r9-held.png` 及对应提交，而不是要求用户分析分层图。两张原图保留在私有 `.state/kyant-resume-press-20261126/`，未加入仓库。r8图内层有圆弧，r9图有横跨底栏的矩形亮区；背景内容不同，不作逐像素光学对照。
+
+`git diff d811063d8 d36f252fc` 定位到同一提交的两条矩形来源：
+
+1. **隐藏图标层的矩形交互光。** r8是 `layerBackdrop → drawBackdrop(Capsule) → InteractiveHighlight → Row内容`。r9删除完整drawBackdrop，却留下InteractiveHighlight。其代码未随此提交修改：仍先用Plus模式drawRect全层白光，再画径向光及图标。它本身不建立胶囊裁剪；每个LiquidBottomTab的clip只约束自己的子项，不能裁剪父层先画的全宽矩形。记录层于是包含未受原56dp胶囊约束的矩形光。
+2. **可见材质的矩形内部导出。** r9新增 `exportedBackdrop=materialBackdrop`。库的导出路径直接record背景层和onDrawSurface的drawRect，没有把显示节点placeWithLayer的Capsule clip录到导出层；导出GraphicsLayer也没有设置自己的shape/clip。因此不能把该导出等同于已显示、已裁剪的胶囊。
+
+两者在r9的按压阶段各自发挥作用：
+
+| r9阶段 | 取样内容 | 已定位的矩形来源 |
+| --- | --- | --- |
+| 静止p=0 | PressBackdrop直接用frosted导出材质，再叠隐藏图标层 | 内部导出的背景/底色没有显示节点胶囊裁剪 |
+| 过渡0<p<1 | 页面与导出材质按1-p合成，再叠图标层 | 导出矩形与逐渐增强的矩形交互光可同时存在 |
+| 静止全按住p≈1 | PressBackdrop走clear页面，之后仍叠图标层 | 即使不再画导出材质，隐藏层的矩形交互光仍在；该光的进度有独立弹簧 |
+
+**为什么外部按钮仍是圆角，内部却能出现直边：** 按钮外层Capsule只裁剪最终输出。源图中一个矩形区域经透镜映射后，仍可在按钮内部形成直边；外部clip不会把源矩形改造成原来的胶囊。原版是先把源材质/交互光限制在隐藏胶囊，再送入按钮透镜。这是不同的裁剪阶段。
+
+因此，r8→r9的这项形状回归已有具体源码原因及对应历史画面支持。“隐藏材质天生是方形，所以必须删除”不符合该差异；改变的是材质/交互光的边界和导出方式。附图每个像素究竟来自哪一条路径，仍不能凭未标明版本的单图唯一判定。
+
+当前源码修正 `a36c36e3d` 不走上述两条路径：隐藏材质连同drawBackdrop的形状和交互光一起捕获；glyph独立且有56dp Capsule clip、不含InteractiveHighlight；没有内部exportedBackdrop材质取样。这里是对既有修正范围的进一步证实，没有叠加新的缩放或裁剪补偿。实际画面仍未编译验证。
+
+另已准备自动原生分层诊断草稿：真实按压弹簧自动推进、固定背景、在静止/过渡/全按住时暂停原生动画并读取页面、隐藏材质、glyph、透镜前、透镜后及最终overlay，同时记录变换坐标。它尚未编译或运行，现封存在私有 `.state/kyant-hidden-clip-20261127/prepared-render-probe-uncompiled.patch`，已验证能应用到a36基线；未留在活动运行源码、未提升正式分支。该草稿只供后续由代理采集/分析，不要求用户理解或手工操作分层，不计为光学验证。
+
 ## 最小源码修正与四项设置保留检查
 
 1. 可见64dp回到完整Row：基础材质、裁剪、交互光与图标共同经过原版可见底栏变换；不再作为按钮源捕获。

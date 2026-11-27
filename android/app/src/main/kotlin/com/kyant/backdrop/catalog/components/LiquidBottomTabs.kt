@@ -26,6 +26,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -193,12 +194,9 @@ fun LiquidBottomTabs(
             scaleY = scale
         }
 
-        // Record the actual displayed bar OUTSIDE its movement/press transform.
-        // The capture includes its real clipped shape/highlight, but no glyphs.
-        // Exporting drawBackdrop's internal surface loses both those properties.
-        Box(
+        // The visible 64dp bar is not the thumb's material source in upstream.
+        Row(
             Modifier
-                .layerBackdrop(materialBackdrop)
                 .graphicsLayer {
                     translationX = panelOffset
                 }
@@ -216,17 +214,42 @@ fun LiquidBottomTabs(
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)
                 .fillMaxWidth()
-        )
-
-        Row(
-            Modifier
-                .graphicsLayer { translationX = panelOffset }
-                .graphicsLayer(barTransform)
-                .height(64f.dp)
-                .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content
+        )
+
+        // Restore upstream's independent 56dp material and press-driven lens.
+        // Split material from glyphs only so the user's extra button blur/tint
+        // can run between them. Both captures have the original hidden Row's
+        // geometry/translation; neither inherits the visible bar's press scale.
+        Box(
+            Modifier
+                .clearAndSetSemantics {}
+                .alpha(0f)
+                .layerBackdrop(materialBackdrop)
+                .graphicsLayer { translationX = panelOffset }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { Capsule() },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        vibrancy()
+                        if (blurRadius > 0f) blur(blurRadius.dp.toPx())
+                        lens(
+                            24f.dp.toPx() * progress,
+                            24f.dp.toPx() * progress
+                        )
+                    },
+                    highlight = {
+                        val progress = dampedDragAnimation.pressProgress
+                        Highlight.Default.copy(alpha = progress)
+                    },
+                    onDrawSurface = { drawRect(containerColor) }
+                )
+                .then(interactiveHighlight.modifier)
+                .height(56f.dp)
+                .fillMaxWidth()
         )
 
         CompositionLocalProvider(
@@ -242,6 +265,9 @@ fun LiquidBottomTabs(
                     .graphicsLayer {
                         translationX = panelOffset
                     }
+                    // Upstream clips these glyphs inside its hidden material
+                    // Row. Retain the same 56dp clip when capturing separately.
+                    .clip(Capsule())
                     .height(56f.dp)
                     .fillMaxWidth()
                     .padding(horizontal = 4f.dp)
@@ -251,9 +277,9 @@ fun LiquidBottomTabs(
             )
         }
 
-        // As in upstream's combined backdrop, include the PAGE under the bar.
-        // This makes the sampled scene opaque: refracting a transparent capsule
-        // over the visible bar would expose its unrefracted silhouette as well.
+        // As upstream does, combine the page with the HIDDEN 56dp material.
+        // The page fills outside that capsule before the thumb lens samples it.
+        // Extra button filters do not replace the base material or blur glyphs.
         val buttonBackdrop = rememberButtonBackdrop(
             scene = rememberCombinedBackdrop(backdrop, materialBackdrop),
             foreground = tabsBackdrop,

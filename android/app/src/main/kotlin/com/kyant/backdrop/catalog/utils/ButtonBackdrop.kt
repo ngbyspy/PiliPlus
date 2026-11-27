@@ -58,7 +58,7 @@ fun rememberButtonBackdrop(
                     drawLayer(layer)
                 } else {
                     // Fully pressed: no intermediate filter, sample the same
-                    // page + visible bar directly. Never a transparent cutout.
+                    // page + hidden bar material directly. Never a transparent cutout.
                     with(scene) { drawBackdrop(density, coordinates, layerBlock) }
                 }
                 drawRect(color.value())

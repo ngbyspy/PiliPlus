@@ -39,26 +39,31 @@ capturing that fallback during handover. Late PixelCopy callbacks are discarded.
 No polling runs in the background; after warm-up only actual scene/surface events
 retry, with throttling. Compose lifecycle pauses with the activity/focus.
 
-The selected thumb samples a complete scene: raw Flutter page underneath the
-actual rendered track, then sharp accent glyphs. Like upstream's combined
-backdrop, the page fills pixels outside the captured track. A transparent
-capsule cutout would leave the unrefracted track visible underneath the lens,
-producing multiple silhouettes. The track capture sits outside its translation
-and press-scale modifiers, so it includes exactly the visible shape, transforms,
-surface color and interactive highlight, rather than an untransformed export.
+The visible 64dp Row and the thumb's hidden 56dp material have separate roles,
+as in the pinned upstream component. The hidden material has its own Capsule,
+base blur/tint, press-driven lens(24p,24p), highlight and interactive glow. Its
+capture includes translation but not the visible bar's press scale. Capturing
+the actual expanded 64dp bar in r12 replaced this upstream material stage; the
+source-only correction restores the independent hidden stage. See
+docs/kyant-bottom-tabs-rendering-audit.md for coordinates, effects and Git diffs.
 
-ButtonBackdrop applies the thumb's additional blur/tint to that complete scene
+ButtonBackdrop applies the thumb's additional blur/tint to page + hidden material
 BEFORE adding foreground glyphs and running the original thumb lens. It does not
 create another capsule or another lens. Glyph capture contains no rectangular
-InteractiveHighlight glow. At full press the additional blur/tint disappear and
-the complete scene is sampled directly; track material values remain unchanged.
-The old material export, second full-width capsule and exported-clip patch are
-removed after user feedback exposed their incorrect composition.
+InteractiveHighlight glow and retains the hidden Row's 56dp Capsule clip. At full
+press the additional blur/tint disappear; hidden base material remains. Page
+pixels fill outside that hidden Capsule as in upstream. Material and glyphs are
+captured separately for independent extra blur, so this is an adaptation, not
+byte-for-byte upstream. The original post-lens 3% pressed black film is not
+restored: the user's button tint fades to zero. No 56/78 sampling compensation,
+exported material, second 64dp material capsule or shader sign change is used.
 
 Four independent appearance sliders retain existing track preferences and add
 thumb clarity (default90%, old0.1 tint) and extra blur (default16dp, 0..32dp).
 Automatic/white/black base-color choices remain independent; automatic preserves
 earlier light/dark defaults. The original thumb lens/highlight/spring formulas
 are retained. PixelCopy buffers remain fixed-size during press/partial scrolling;
-no new capture loop or dependency/SDK upgrade. The r12 repair awaits user visual
-acceptance; compile/tests are not a native optics/performance pass.
+no new capture loop or dependency/SDK upgrade. The source-only hidden-material
+correction is uncompiled and has no native rendering/visual/performance
+acceptance. The latest compiled APK remains r12; prior builds/tests do not
+validate this correction.

@@ -32,38 +32,10 @@ packaging, including an independent blur control. The opt-in preference still
 defaults off. Native host resources are enabled in formal and acceptance builds;
 SDK support, visibility and the user's preference continue to gate actual use.
 
-Foreground recovery observes Android focus, Flutter display and SurfaceHolder
-readiness. Missing/new surface buffers are transient: the original Flutter bar
-is shown during bounded warm-up, and a scene-epoch acknowledgement prevents
-capturing that fallback during handover. Late PixelCopy callbacks are discarded.
-No polling runs in the background; after warm-up only actual scene/surface events
-retry, with throttling. Compose lifecycle pauses with the activity/focus.
-
-The visible 64dp Row and the thumb's hidden 56dp material have separate roles,
-as in the pinned upstream component. The hidden material has its own Capsule,
-base blur/tint, press-driven lens(24p,24p), highlight and interactive glow. Its
-capture includes translation but not the visible bar's press scale. Capturing
-the actual expanded 64dp bar in r12 replaced this upstream material stage; the
-source-only correction restores the independent hidden stage. See
-docs/kyant-bottom-tabs-rendering-audit.md for coordinates, effects and Git diffs.
-
-ButtonBackdrop applies the thumb's additional blur/tint to page + hidden material
-BEFORE adding foreground glyphs and running the original thumb lens. It does not
-create another capsule or another lens. Glyph capture contains no rectangular
-InteractiveHighlight glow and retains the hidden Row's 56dp Capsule clip. At full
-press the additional blur/tint disappear; hidden base material remains. Page
-pixels fill outside that hidden Capsule as in upstream. Material and glyphs are
-captured separately for independent extra blur, so this is an adaptation, not
-byte-for-byte upstream. The original post-lens 3% pressed black film is not
-restored: the user's button tint fades to zero. No 56/78 sampling compensation,
-exported material, second 64dp material capsule or shader sign change is used.
-
-Four independent appearance sliders retain existing track preferences and add
-thumb clarity (default90%, old0.1 tint) and extra blur (default16dp, 0..32dp).
-Automatic/white/black base-color choices remain independent; automatic preserves
-earlier light/dark defaults. The original thumb lens/highlight/spring formulas
-are retained. PixelCopy buffers remain fixed-size during press/partial scrolling;
-no new capture loop or dependency/SDK upgrade. The source-only hidden-material
-correction is uncompiled and has no native rendering/visual/performance
-acceptance. The latest compiled APK remains r12; prior builds/tests do not
-validate this correction.
+2026-11-27: restored the complete r8 optical component/controls exactly. Only
+Android foreground recovery from r9 is retained: focus/lifecycle/display/Surface
+readiness, transient PixelCopy fallback, stale-result rejection, clean-scene
+acknowledgement and one foreground scene. No r9 PressBackdrop, later button
+material/colour controls, alternate layer graph, clipping or scale compensation
+is active. N02 stays removed by the user's explicit choice. This is source-only;
+no compilation, package, device operation or new visual acceptance is claimed.

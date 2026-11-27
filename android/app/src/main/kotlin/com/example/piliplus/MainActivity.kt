@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager.LayoutParams
 import com.ryanheise.audioservice.AudioServiceActivity
-import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -63,16 +62,6 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (resources.getBoolean(R.bool.spy_profile_diagnostics)) {
-            // AudioServiceActivity creates its own cached engine without the
-            // activity's shell arguments. Initialize the VM first in Profile
-            // so profiling/discovery flags reach that same audio engine.
-            val loader = FlutterInjector.instance().flutterLoader()
-            loader.startInitialization(applicationContext)
-            val args = (flutterShellArgs.toArray().toList() + "--enable-dart-profiling")
-                .distinct().toTypedArray()
-            loader.ensureInitializationComplete(applicationContext, args)
-        }
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode =

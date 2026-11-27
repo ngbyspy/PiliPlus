@@ -32,5 +32,3 @@ export 'src/glass_surface.dart';
 export 'src/glass_theme.dart';
 export 'src/liquid_swipe_surface.dart';
 export 'src/reduced_transparency.dart';
-
-export 'src/glass_debug_probe.dart';

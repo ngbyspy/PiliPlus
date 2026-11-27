@@ -1,12 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kProfileMode;
 import 'package:flutter/rendering.dart';
 
 import 'glass_foreground.dart';
 import 'glass_backdrop_layer.dart';
-import 'glass_debug_probe.dart';
 import 'glass_params.dart';
 import 'glass_shader_assets.dart';
 import 'glass_theme.dart';
@@ -54,22 +52,6 @@ class GlassSurface extends StatefulWidget {
 }
 
 class _GlassSurfaceState extends State<GlassSurface> {
-  @override
-  void initState() {
-    super.initState();
-    if (kProfileMode) GlassDebugProbe.mode.addListener(_probeChanged);
-  }
-
-  void _probeChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    if (kProfileMode) GlassDebugProbe.mode.removeListener(_probeChanged);
-    super.dispose();
-  }
-
   ui.FragmentProgram? _program;
   bool _loading = false;
   bool _loadFailed = false;
@@ -103,11 +85,9 @@ class _GlassSurfaceState extends State<GlassSurface> {
   Future<void> _load() async {
     try {
       final p = await loadGlassFragmentProgram('liquid_glass.frag');
-      if (kProfileMode) GlassDebugProbe.loaded++;
       if (mounted) setState(() => _program = p);
     } catch (error) {
       _loadFailed = true;
-      if (kProfileMode) GlassDebugProbe.failed++;
       debugPrint(
         'Liquid glass shader unavailable; using native fallback: $error',
       );
@@ -141,8 +121,7 @@ class _GlassSurfaceState extends State<GlassSurface> {
               ),
         ),
       );
-      return widget.drawForeground &&
-              !(kProfileMode && GlassDebugProbe.mode.value == 8)
+      return widget.drawForeground
           ? GlassForeground(
               params: widget.params
                   .copyWith(highlightMode: 2)
@@ -153,8 +132,7 @@ class _GlassSurfaceState extends State<GlassSurface> {
     }
 
     final surface = _buildSurface(context);
-    return widget.drawForeground &&
-            !(kProfileMode && GlassDebugProbe.mode.value == 8)
+    return widget.drawForeground
         ? GlassForeground(
             params: widget.params.toPhysical(
               MediaQuery.devicePixelRatioOf(context),
@@ -178,7 +156,7 @@ class _GlassSurfaceState extends State<GlassSurface> {
         logicalParams.brightness == 0 &&
         logicalParams.contrast == 1 &&
         logicalParams.glowAlpha <= 0.001;
-    if (neutralOptics && !(kProfileMode && GlassDebugProbe.mode.value > 0)) {
+    if (neutralOptics) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(logicalParams.cornerRadius),
         child: CustomPaint(
@@ -207,7 +185,6 @@ class _GlassSurfaceState extends State<GlassSurface> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.params.cornerRadius),
       child: _GlassBackdrop(
-        key: ValueKey(kProfileMode ? GlassDebugProbe.mode.value : 0),
         program: program,
         params: _debugGlassTint
             ? params.copyWith(surfaceColor: _nextDebugTint())
@@ -377,9 +354,6 @@ class _RenderGlassBackdrop extends RenderProxyBox {
       scaleX: bounds.width / size.width,
       scaleY: bounds.height / size.height,
     );
-    if (kProfileMode && GlassDebugProbe.mode.value > 0) {
-      _shader.setFloat(28, -100.0 - GlassDebugProbe.mode.value);
-    }
     final blur = ui.ImageFilter.blur(
       sigmaX: _blurSigma > 0 ? _blurSigma : 0.0001,
       sigmaY: _blurSigma > 0 ? _blurSigma : 0.0001,
@@ -391,17 +365,15 @@ class _RenderGlassBackdrop extends RenderProxyBox {
         _params.saturation == 1 &&
         _params.brightness == 0 &&
         _params.contrast == 1;
-    return kProfileMode && GlassDebugProbe.mode.value == 7
-        ? ui.ImageFilter.shader(_shader)
-        : ui.ImageFilter.compose(
-            outer: ui.ImageFilter.shader(_shader),
-            inner: neutral
-                ? blur
-                : ui.ImageFilter.compose(
-                    outer: blur,
-                    inner: _params.colorFilter,
-                  ),
-          );
+    return ui.ImageFilter.compose(
+      outer: ui.ImageFilter.shader(_shader),
+      inner: neutral
+          ? blur
+          : ui.ImageFilter.compose(
+              outer: blur,
+              inner: _params.colorFilter,
+            ),
+    );
   }
 
   @override

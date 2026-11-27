@@ -26,11 +26,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -46,7 +44,6 @@ import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.catalog.utils.DampedDragAnimation
 import com.kyant.backdrop.catalog.utils.InteractiveHighlight
-import com.kyant.backdrop.catalog.utils.rememberButtonBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -70,27 +67,20 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     surfaceOpacity: Float = 0.4f,
     blurRadius: Float = 8f,
-    buttonOpacity: Float = 0.1f,
-    buttonBlurRadius: Float = 16f,
-    surfaceTint: String = "automatic",
-    buttonTint: String = "automatic",
     darkTheme: Boolean = isSystemInDarkTheme(),
     accent: Color? = null,
     onTabReselected: ((Int) -> Unit)? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = !darkTheme
-    val accentColor = accent ?:
+    val accentColor = accent ?: 
         if (isLightTheme) Color(0xFF0088FF)
         else Color(0xFF0091FF)
-    val containerColor = glassTint(surfaceTint,
-        if (isLightTheme) Color(0xFFFAFAFA) else Color(0xFF121212))
-        .copy(alpha = surfaceOpacity)
-    val buttonColor = glassTint(buttonTint,
-        if (isLightTheme) Color.Black else Color.White)
+    val containerColor =
+        if (isLightTheme) Color(0xFFFAFAFA).copy(surfaceOpacity)
+        else Color(0xFF121212).copy(surfaceOpacity)
 
     val tabsBackdrop = rememberLayerBackdrop()
-    val materialBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
         modifier,
@@ -187,14 +177,6 @@ fun LiquidBottomTabs(
             )
         }
 
-        val barTransform: GraphicsLayerScope.() -> Unit = {
-            val progress = dampedDragAnimation.pressProgress
-            val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-            scaleX = scale
-            scaleY = scale
-        }
-
-        // The visible 64dp bar is not the thumb's material source in upstream.
         Row(
             Modifier
                 .graphicsLayer {
@@ -208,7 +190,12 @@ fun LiquidBottomTabs(
                         if (blurRadius > 0f) blur(blurRadius.dp.toPx())
                         lens(24f.dp.toPx(), 24f.dp.toPx())
                     },
-                    layerBlock = barTransform,
+                    layerBlock = {
+                        val progress = dampedDragAnimation.pressProgress
+                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+                        scaleX = scale
+                        scaleY = scale
+                    },
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(interactiveHighlight.modifier)
@@ -217,39 +204,6 @@ fun LiquidBottomTabs(
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content
-        )
-
-        // Restore upstream's independent 56dp material and press-driven lens.
-        // Split material from glyphs only so the user's extra button blur/tint
-        // can run between them. Both captures have the original hidden Row's
-        // geometry/translation; neither inherits the visible bar's press scale.
-        Box(
-            Modifier
-                .clearAndSetSemantics {}
-                .alpha(0f)
-                .layerBackdrop(materialBackdrop)
-                .graphicsLayer { translationX = panelOffset }
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { Capsule() },
-                    effects = {
-                        val progress = dampedDragAnimation.pressProgress
-                        vibrancy()
-                        if (blurRadius > 0f) blur(blurRadius.dp.toPx())
-                        lens(
-                            24f.dp.toPx() * progress,
-                            24f.dp.toPx() * progress
-                        )
-                    },
-                    highlight = {
-                        val progress = dampedDragAnimation.pressProgress
-                        Highlight.Default.copy(alpha = progress)
-                    },
-                    onDrawSurface = { drawRect(containerColor) }
-                )
-                .then(interactiveHighlight.modifier)
-                .height(56f.dp)
-                .fillMaxWidth()
         )
 
         CompositionLocalProvider(
@@ -265,9 +219,25 @@ fun LiquidBottomTabs(
                     .graphicsLayer {
                         translationX = panelOffset
                     }
-                    // Upstream clips these glyphs inside its hidden material
-                    // Row. Retain the same 56dp clip when capturing separately.
-                    .clip(Capsule())
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { Capsule() },
+                        effects = {
+                            val progress = dampedDragAnimation.pressProgress
+                            vibrancy()
+                            if (blurRadius > 0f) blur(blurRadius.dp.toPx())
+                            lens(
+                                24f.dp.toPx() * progress,
+                                24f.dp.toPx() * progress
+                            )
+                        },
+                        highlight = {
+                            val progress = dampedDragAnimation.pressProgress
+                            Highlight.Default.copy(alpha = progress)
+                        },
+                        onDrawSurface = { drawRect(containerColor) }
+                    )
+                    .then(interactiveHighlight.modifier)
                     .height(56f.dp)
                     .fillMaxWidth()
                     .padding(horizontal = 4f.dp)
@@ -276,21 +246,6 @@ fun LiquidBottomTabs(
                 content = content
             )
         }
-
-        // As upstream does, combine the page with the HIDDEN 56dp material.
-        // The page fills outside that capsule before the thumb lens samples it.
-        // Extra button filters do not replace the base material or blur glyphs.
-        val buttonBackdrop = rememberButtonBackdrop(
-            scene = rememberCombinedBackdrop(backdrop, materialBackdrop),
-            foreground = tabsBackdrop,
-            blurRadius = {
-                buttonBlurRadius * (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f)
-            },
-            tint = {
-                buttonColor.copy(alpha = buttonOpacity *
-                    (1f - dampedDragAnimation.pressProgress).coerceIn(0f, 1f))
-            }
-        )
 
         Box(
             Modifier
@@ -303,7 +258,7 @@ fun LiquidBottomTabs(
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
-                    backdrop = buttonBackdrop,
+                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
@@ -334,6 +289,15 @@ fun LiquidBottomTabs(
                         val velocity = dampedDragAnimation.velocity / 10f
                         scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
                         scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                    },
+                    onDrawSurface = {
+                        val progress = dampedDragAnimation.pressProgress
+                        drawRect(
+                            if (isLightTheme) Color.Black.copy(0.1f)
+                            else Color.White.copy(0.1f),
+                            alpha = 1f - progress
+                        )
+                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
                     }
                 )
                 .height(56f.dp)
@@ -342,8 +306,3 @@ fun LiquidBottomTabs(
     }
 }
 
-private fun glassTint(choice: String, automatic: Color): Color = when (choice) {
-    "white" -> Color.White
-    "black" -> Color.Black
-    else -> automatic
-}

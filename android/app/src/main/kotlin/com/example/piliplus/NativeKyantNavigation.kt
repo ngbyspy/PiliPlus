@@ -74,8 +74,6 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         val height: Float, val dpr: Float, val selected: Int, val items: List<Item>,
         val dark: Boolean, val tint: Int, val foreground: Int, val opacity: Float,
         val blurRadius: Float,
-        val buttonOpacity: Float, val buttonBlurRadius: Float,
-        val surfaceTint: String, val buttonTint: String,
         val fontScale: Float, val visible: Boolean, val fallback: Boolean
     )
 
@@ -201,10 +199,6 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             items, args["dark"] == true, (args["tint"] as Number).toInt(),
             (args["foreground"] as Number).toInt(), n("opacity", .4f).coerceIn(0f, 1f),
             n("blurRadius", 8f).let { if (it.isFinite()) it.coerceIn(0f, 16f) else 8f },
-            n("buttonOpacity", .1f).let { if (it.isFinite()) it.coerceIn(0f, 1f) else .1f },
-            n("buttonBlurRadius", 16f).let { if (it.isFinite()) it.coerceIn(0f, 32f) else 16f },
-            args["surfaceTint"] as? String ?: "automatic",
-            args["buttonTint"] as? String ?: "automatic",
             n("fontScale", 1f), args["visible"] == true, args["fallback"] == true
         )
         if (awaitingCleanScene && !next.fallback &&
@@ -286,10 +280,7 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
             waitForSurface()
             return
         }
-        // Stronger button blur needs neighboring bar pixels too. This depends
-        // only on settings/geometry, never on press animation or scroll offset.
-        val margin = ceil(maxOf(c.height * .45f,
-            (c.blurRadius + c.buttonBlurRadius) * c.height / 64f)).toInt()
+        val margin = ceil(c.height * .45f).toInt()
         if (c.top >= source.height || c.top + c.height <= 0 ||
             c.left >= source.width || c.left + c.width <= 0) {
             root?.visibility = View.GONE
@@ -480,8 +471,6 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
                     modifier = Modifier.offset { IntOffset(barX.roundToInt(), barY.roundToInt()) }
                         .size((c.width / density).dp, 64.dp),
                     surfaceOpacity = c.opacity, blurRadius = c.blurRadius,
-                    buttonOpacity = c.buttonOpacity, buttonBlurRadius = c.buttonBlurRadius,
-                    surfaceTint = c.surfaceTint, buttonTint = c.buttonTint,
                     darkTheme = c.dark, accent = Color(c.tint)
                 ) {
                     c.items.forEachIndexed { index, item ->
@@ -540,3 +529,4 @@ class NativeKyantNavigation(private val activity: Activity, engine: FlutterEngin
         }
     }
 }
+

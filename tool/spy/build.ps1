@@ -13,6 +13,9 @@ param(
     [switch]$Offline
 )
 . (Join-Path $PSScriptRoot 'support.ps1')
+# PowerShell's location can differ from the process working directory used by
+# System.IO. Resolve user paths before passing them to either API.
+if ($OutputRoot) { $OutputRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputRoot) }
 if ($Platform -eq 'iOS' -and -not $IsMacOS) { throw 'Build iPad IPA on a GitHub macOS runner' }
 $context = Get-SpyContext $SourceRoot $CacheRoot
 if ($AndroidRollbackExperiment -and ($Platform -ne 'Android' -or $AcceptanceBuild -or $ValidateOnly -or $context.branch -ne 'spy/dev' -or -not $OutputRoot -or $AndroidBuildMode -ne 'release')) { throw 'Rollback experiments require Android Release on spy/dev, a separate explicit OutputRoot, and no AcceptanceBuild/ValidateOnly' }

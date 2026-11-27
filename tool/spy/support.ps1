@@ -19,6 +19,7 @@ function Get-SpyGit([string]$Root, [string[]]$Arguments) {
 function Get-SpyHash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 function Get-SpyTextHash([string]$Text) { [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Text))).ToLowerInvariant() }
 function Write-SpyJson($Value, [string]$Path) {
+    $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     New-Item -ItemType Directory -Path (Split-Path -Parent $Path) -Force | Out-Null
     [IO.File]::WriteAllText($Path,($Value | ConvertTo-Json -Depth 30) + "`n",[Text.UTF8Encoding]::new($false))
 }

@@ -29,6 +29,7 @@ import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/slide_color_picker.dart';
 import 'package:PiliPlus/pages/setting/widgets/dual_slider_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/glass_clarity_setting.dart';
+import 'package:PiliPlus/pages/setting/widgets/glass_bar_width_setting.dart';
 import 'package:PiliPlus/pages/setting/widgets/multi_select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/ordered_multi_select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
@@ -119,6 +120,19 @@ Widget _buildGlassMaterialSettings(BuildContext context) {
   Widget buildSettings(bool native) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
+      if (native)
+        GlassBarWidthSetting(
+          value: Pref.androidGlassBarWidth,
+          onChanged: (value) {
+            if (Get.isRegistered<MainController>()) {
+              Get.find<MainController>().androidGlassBarWidth.value = value;
+            }
+          },
+          onSaved: (value) => GStorage.setting.put(
+            SettingBoxKey.androidGlassBarWidth,
+            value,
+          ),
+        ),
       if (native)
         const Padding(
           padding: EdgeInsets.all(16),

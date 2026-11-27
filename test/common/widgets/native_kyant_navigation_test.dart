@@ -15,6 +15,7 @@ void main() {
   var buttonBlur = .5;
   var barTint = GlassTint.automatic;
   var buttonTint = GlassTint.automatic;
+  var barWidth = 0.0;
   setUp(() {
     WidgetsBinding.instance.handleAppLifecycleStateChanged(
       AppLifecycleState.resumed,
@@ -26,6 +27,7 @@ void main() {
     buttonBlur = .5;
     barTint = GlassTint.automatic;
     buttonTint = GlassTint.automatic;
+    barWidth = 0;
     calls.clear();
     selections.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -53,6 +55,7 @@ void main() {
     buttonBlur: buttonBlur,
     barTint: barTint,
     buttonTint: buttonTint,
+    barWidth: barWidth,
   );
   Widget host(Widget child) => MaterialApp(
     navigatorObservers: [KyantNavigationRoutes.instance],
@@ -194,6 +197,44 @@ void main() {
     expect(config()['buttonBlurRadius'], 0);
     expect(config()['buttonTint'], 2);
     expect(config()['owner'], owner);
+    expect(selections, isEmpty);
+    expect(tester.binding.transientCallbackCount, 0);
+    await close(tester);
+  });
+
+  testWidgets('width follows the centered anchor and stays inside the screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    Map config() =>
+        calls.lastWhere((c) => c.method == 'update').arguments as Map;
+    final original = Map.of(config());
+    expect(original['width'], 480);
+    barWidth = 260;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['width'], 260);
+    expect(config()['left'], closeTo((original['left'] as num) + 110, .001));
+    expect(config()['height'], original['height']);
+    expect(config()['top'], original['top']);
+    expect(config()['opacity'], original['opacity']);
+    expect(config()['blurRadius'], original['blurRadius']);
+    barWidth = 600;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['width'], 600);
+    await tester.pumpWidget(host(SizedBox(width: 320, child: bar())));
+    await tester.pumpAndSettle();
+    expect(config()['width'], 272);
+    expect(
+      config()['left'],
+      closeTo(
+        (original['left'] as num) + (original['width'] as num) / 2 - 136,
+        .001,
+      ),
+    );
+    expect(config()['height'], 64);
     expect(selections, isEmpty);
     expect(tester.binding.transientCallbackCount, 0);
     await close(tester);

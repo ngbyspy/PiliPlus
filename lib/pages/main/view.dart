@@ -222,6 +222,7 @@ class _MainAppState extends PopScopeState<MainApp>
               buttonBlur: _mainController.androidGlassButtonBlur.value,
               barTint: _mainController.androidGlassBarTint.value,
               buttonTint: _mainController.androidGlassButtonTint.value,
+              barWidth: _mainController.androidGlassBarWidth.value,
               selectedIndex: _mainController.selectedIndex.value,
               onSelected: _mainController.setIndex,
               fallback: _mainController.androidLiquidGlassNavigation.value

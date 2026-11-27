@@ -166,6 +166,7 @@ abstract final class SettingBoxKey {
       androidGlassButtonBlur = 'androidGlassButtonBlur',
       androidGlassBarTint = 'androidGlassBarTint',
       androidGlassButtonTint = 'androidGlassButtonTint',
+      androidGlassBarWidth = 'androidGlassBarWidth',
       androidNativeKyantNavigation = 'androidNativeKyantNavigation',
       removeSafeArea = 'removeSafeArea',
       angleDegrees = 'angleDegrees',

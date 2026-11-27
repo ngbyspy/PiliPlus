@@ -1134,6 +1134,10 @@ abstract final class Pref {
     _setting.get(SettingBoxKey.androidGlassButtonTint),
   );
 
+  static double get androidGlassBarWidth => GlassAppearance.normalizeBarWidth(
+    _setting.get(SettingBoxKey.androidGlassBarWidth),
+  );
+
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
 

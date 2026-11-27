@@ -50,6 +50,7 @@ class NativeKyantNavigationBar extends StatefulWidget {
     this.buttonBlur,
     this.barTint = GlassTint.automatic,
     this.buttonTint = GlassTint.automatic,
+    this.barWidth = GlassAppearance.defaultBarWidth,
   });
   static const channelName = 'com.ngbyspy.piliplus/kyant_navigation';
   final List<KyantDestination> items;
@@ -62,6 +63,7 @@ class NativeKyantNavigationBar extends StatefulWidget {
   final double? buttonBlur;
   final GlassTint barTint;
   final GlassTint buttonTint;
+  final double barWidth;
   @override
   State<NativeKyantNavigationBar> createState() =>
       _NativeKyantNavigationBarState();
@@ -291,7 +293,9 @@ class _NativeKyantNavigationBarState extends State<NativeKyantNavigationBar>
           top: false,
           minimum: const EdgeInsets.fromLTRB(24, 14, 24, 10),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: BoxConstraints(
+              maxWidth: GlassAppearance.nativeBarMaxWidth(widget.barWidth),
+            ),
             child: _NativeBarAnchor(
               key: _anchor,
               onScene: _queueSync,

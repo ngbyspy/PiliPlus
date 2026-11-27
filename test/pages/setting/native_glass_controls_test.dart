@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:PiliPlus/pages/setting/widgets/glass_clarity_setting.dart';
+import 'package:PiliPlus/pages/setting/widgets/glass_bar_width_setting.dart';
 import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
@@ -81,6 +82,73 @@ void main() {
       expect(Pref.androidGlassButtonBlur, .5);
       expect(Pref.androidGlassBarTint, GlassTint.automatic);
       expect(Pref.androidGlassButtonTint, GlassTint.automatic);
+    },
+  );
+
+  test(
+    'width preference is independent and missing values stay automatic',
+    () async {
+      expect(Pref.androidGlassBarWidth, 0);
+      await GStorage.setting.putAll({
+        SettingBoxKey.androidGlassClarity: .8,
+        SettingBoxKey.androidGlassButtonBlur: .25,
+      });
+      await GStorage.setting.put(SettingBoxKey.androidGlassBarWidth, 260.0);
+      expect(Pref.androidGlassBarWidth, 260);
+      expect(Pref.androidGlassClarity, .8);
+      expect(Pref.androidGlassButtonBlur, .25);
+      await GStorage.setting.put(SettingBoxKey.androidGlassBarWidth, 0.0);
+      expect(Pref.androidGlassBarWidth, 0);
+    },
+  );
+
+  testWidgets(
+    'width saves on release, survives reopening and restores automatic',
+    (tester) async {
+      var live = Pref.androidGlassBarWidth;
+      var savedWidth = live;
+      expect(live, 0);
+      final materialBefore = Pref.androidGlassClarity;
+      Widget host() => MaterialApp(
+        home: Scaffold(
+          body: GlassBarWidthSetting(
+            value: savedWidth,
+            onChanged: (value) => live = value,
+            onSaved: (value) => savedWidth = value,
+          ),
+        ),
+      );
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      final slider = find.byKey(const ValueKey('glass-bar-width-slider'));
+      final rect = tester.getRect(slider);
+      final gesture = await tester.startGesture(rect.center);
+      await gesture.moveTo(Offset(rect.left + 70, rect.center.dy));
+      await tester.pump();
+      expect(live, greaterThanOrEqualTo(200));
+      expect(live, lessThan(480));
+      expect(savedWidth, 0);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(savedWidth, live);
+      expect(Pref.androidGlassClarity, materialBefore);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      expect(tester.widget<Slider>(slider).value, live);
+      await tester.tap(find.byTooltip('恢复自动宽度'));
+      await tester.pumpAndSettle();
+      expect(savedWidth, 0);
+      expect(live, 0);
+      final second = await tester.startGesture(tester.getRect(slider).center);
+      await second.moveTo(Offset(rect.left + 90, rect.center.dy));
+      await tester.pump();
+      final inFlight = live;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await second.cancel();
+      await tester.pumpAndSettle();
+      expect(savedWidth, inFlight);
+      expect(tester.takeException(), isNull);
     },
   );
 

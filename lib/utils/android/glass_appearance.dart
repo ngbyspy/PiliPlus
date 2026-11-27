@@ -19,6 +19,19 @@ abstract final class GlassAppearance {
   // Retain the accepted 0.4 track tint when no preference has been saved.
   static const defaultClarity = 0.6;
   static const defaultBlur = 0.5;
+  static const defaultBarWidth = 0.0; // Automatic: retain the accepted layout.
+  static const minBarWidth = 200.0;
+  static const maxBarWidth = 600.0;
+
+  static double normalizeBarWidth(Object? value) =>
+      value is num && value.isFinite && value > 0
+      ? value.toDouble().clamp(minBarWidth, maxBarWidth)
+      : defaultBarWidth;
+
+  static double nativeBarMaxWidth(Object? value) {
+    final width = normalizeBarWidth(value);
+    return width == defaultBarWidth ? 480 : width;
+  }
 
   static double normalize(Object? value) => value is num && value.isFinite
       ? value.toDouble().clamp(0.0, 1.0)

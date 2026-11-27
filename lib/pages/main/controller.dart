@@ -67,6 +67,7 @@ class MainController extends GetxController
   final androidGlassButtonBlur = Pref.androidGlassButtonBlur.obs;
   final androidGlassBarTint = Pref.androidGlassBarTint.obs;
   final androidGlassButtonTint = Pref.androidGlassButtonTint.obs;
+  final androidGlassBarWidth = Pref.androidGlassBarWidth.obs;
   final androidNativeKyantNavigation = Pref.androidNativeKyantNavigation.obs;
   final useSideBar = Pref.useSideBar;
   final hideSideBarLabel = Pref.hideSideBarLabel;

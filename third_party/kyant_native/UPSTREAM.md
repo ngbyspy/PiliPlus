@@ -32,33 +32,10 @@ packaging, including an independent blur control. The opt-in preference still
 defaults off. Native host resources are enabled in formal and acceptance builds;
 SDK support, visibility and the user's preference continue to gate actual use.
 
-Foreground recovery observes Android focus, Flutter display and SurfaceHolder
-readiness. Missing/new surface buffers are transient: the original Flutter bar
-is shown during bounded warm-up, and a scene-epoch acknowledgement prevents
-capturing that fallback during handover. Late PixelCopy callbacks are discarded.
-No polling runs in the background; after warm-up only actual scene/surface events
-retry, with throttling. Compose lifecycle pauses with the activity/focus.
-
-The selected thumb samples a complete scene: raw Flutter page underneath the
-actual rendered track, then sharp accent glyphs. Like upstream's combined
-backdrop, the page fills pixels outside the captured track. A transparent
-capsule cutout would leave the unrefracted track visible underneath the lens,
-producing multiple silhouettes. The track capture sits outside its translation
-and press-scale modifiers, so it includes exactly the visible shape, transforms,
-surface color and interactive highlight, rather than an untransformed export.
-
-ButtonBackdrop applies the thumb's additional blur/tint to that complete scene
-BEFORE adding foreground glyphs and running the original thumb lens. It does not
-create another capsule or another lens. Glyph capture contains no rectangular
-InteractiveHighlight glow. At full press the additional blur/tint disappear and
-the complete scene is sampled directly; track material values remain unchanged.
-The old material export, second full-width capsule and exported-clip patch are
-removed after user feedback exposed their incorrect composition.
-
-Four independent appearance sliders retain existing track preferences and add
-thumb clarity (default90%, old0.1 tint) and extra blur (default16dp, 0..32dp).
-Automatic/white/black base-color choices remain independent; automatic preserves
-earlier light/dark defaults. The original thumb lens/highlight/spring formulas
-are retained. PixelCopy buffers remain fixed-size during press/partial scrolling;
-no new capture loop or dependency/SDK upgrade. The r12 repair awaits user visual
-acceptance; compile/tests are not a native optics/performance pass.
+2026-11-27: restored the complete r8 optical component/controls exactly. Only
+Android foreground recovery from r9 is retained: focus/lifecycle/display/Surface
+readiness, transient PixelCopy fallback, stale-result rejection, clean-scene
+acknowledgement and one foreground scene. No r9 PressBackdrop, later button
+material/colour controls, alternate layer graph, clipping or scale compensation
+is active. N02 stays removed by the user's explicit choice. This is source-only;
+no compilation, package, device operation or new visual acceptance is claimed.

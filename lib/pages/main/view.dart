@@ -216,10 +216,6 @@ class _MainAppState extends PopScopeState<MainApp>
           if (_mainController.androidNativeKyantNavigation.value) {
             final count = _mainController.dynCount.value;
             return NativeKyantNavigationBar(
-              tint: _mainController.androidGlassTint.value,
-              buttonTint: _mainController.androidGlassButtonTint.value,
-              buttonClarity: _mainController.androidGlassButtonClarity.value,
-              buttonBlur: _mainController.androidGlassButtonBlur.value,
               clarity: _mainController.androidGlassClarity.value,
               blur: _mainController.androidGlassBlur.value,
               selectedIndex: _mainController.selectedIndex.value,

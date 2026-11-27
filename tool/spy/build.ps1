@@ -6,6 +6,7 @@ param(
     [string]$OutputRoot,
     [string]$ProxyUrl,
     [switch]$AcceptanceBuild,
+    [switch]$AndroidRollbackExperiment,
     [ValidateSet('release','debug','profile')][string]$AndroidBuildMode = 'release',
     [ValidateSet('skia','impeller')][string]$AndroidRenderer = 'skia',
     [switch]$ValidateOnly,
@@ -14,8 +15,10 @@ param(
 . (Join-Path $PSScriptRoot 'support.ps1')
 if ($Platform -eq 'iOS' -and -not $IsMacOS) { throw 'Build iPad IPA on a GitHub macOS runner' }
 $context = Get-SpyContext $SourceRoot $CacheRoot
+if ($AndroidRollbackExperiment -and ($Platform -ne 'Android' -or $AcceptanceBuild -or $ValidateOnly -or $context.branch -ne 'spy/dev' -or -not $OutputRoot -or $AndroidBuildMode -ne 'release')) { throw 'Rollback experiments require Android Release on spy/dev, a separate explicit OutputRoot, and no AcceptanceBuild/ValidateOnly' }
+if ($AndroidRollbackExperiment -and ($context.release.androidPackageVersionCode -ne 565512 -or $context.release.androidApplicationId -cne 'com.ngbyspy.piliplus.spy' -or $context.release.androidCertificateSha256 -cne 'b9b273a5fb00a430b4d0a7722f666db916ba1788fca6b913d989a859e335acbc')) { throw 'Rollback experiments must retain the accepted r13 installation code, package and signing certificate' }
 if ($AcceptanceBuild -and ($ValidateOnly -or $context.branch -ne 'spy/dev' -or -not $OutputRoot)) { throw 'Acceptance packages require spy/dev and an explicit OutputRoot' }
-if (-not $ValidateOnly -and -not $AcceptanceBuild -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
+if (-not $ValidateOnly -and -not $AcceptanceBuild -and -not $AndroidRollbackExperiment -and $context.branch -ne 'spy/main') { throw 'Release packages must come from spy/main' }
 $status = Get-SpyGit $context.source @('status','--porcelain','--untracked-files=all')
 if (-not $ValidateOnly -and $status) { throw 'Release checkout has source changes; validate and commit them before packaging' }
 if ($Platform -eq 'Android' -and -not $ValidateOnly -and -not $AcceptanceBuild -and -not $context.release.androidReleaseEnabled) { throw 'Android SPY packaging is disabled by the release policy' }
@@ -31,6 +34,15 @@ if ($AcceptanceBuild) {
     $context.release.tag += "-$suffix"
     $packageBuildId += "-$suffix"
 }
+if ($AndroidRollbackExperiment) {
+    # Keep native identity/code while giving experimental artifacts distinct names.
+    $suffix = "experiment-$($context.commit.Substring(0,8))"
+    $context.release.tag += "-$suffix"
+    $packageBuildId += "-$suffix"
+    $stableDirectory = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $context.source) 'Releases/spy-v2.2.1.1-r13')).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    $experimentDirectory = [IO.Path]::GetFullPath($OutputRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
+    if ($experimentDirectory.Equals($stableDirectory, [StringComparison]::OrdinalIgnoreCase) -or $experimentDirectory.StartsWith($stableDirectory + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Preserve the accepted r13 release directory; choose a separate experiment OutputRoot' }
+}
 if (-not $OutputRoot) {
     $OutputRoot = if ($ValidateOnly) { Join-Path $context.source ".spy-build/validation/$Platform" } else { Join-Path (Split-Path -Parent $context.source) ".build/release-staging/$($context.release.tag)/$Platform" }
 }
@@ -39,6 +51,7 @@ $reportPath = Join-Path $OutputRoot ("build-$($Platform.ToLowerInvariant()).json
 $report = @{product='PiliPlus-SPY';platform=$Platform;sourceCommit=$context.commit;sourceDirty=[bool]$status;upstreamCommit=$context.release.upstreamCommit;release=$context.release;startedOn=[DateTimeOffset]::UtcNow.ToString('o');nativeAcceptance='upstream-compatible identity restored; overwrite/data-retention acceptance pending';networkRecovery='deferred by user'}
 $report.sourceBranch = $context.branch
 $report.buildKind = if ($AcceptanceBuild) { 'acceptance' } else { 'release' }
+if ($AndroidRollbackExperiment) { $report.buildKind = 'rollback-experiment'; $report.rollbackBaseline = 'spy-r13-accepted'; $report.installVersionFrozen = 565512 }
 $report.packageProfile = $packageProfile
 if ($Platform -eq 'Android') { $report.androidRenderer = $AndroidRenderer }
 if ($AcceptanceBuild) { $report.nativeAcceptance = 'development feature acceptance pending' }

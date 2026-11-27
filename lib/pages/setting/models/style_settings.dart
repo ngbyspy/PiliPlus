@@ -52,6 +52,96 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:material_ui/material_ui.dart' hide StatefulBuilder;
 import 'package:path/path.dart' as path;
 
+Widget _buildGlassMaterialSettings(BuildContext context) {
+  Widget controls({required bool native, bool button = false}) {
+    return GlassClaritySetting(
+      key: ValueKey(
+        button ? 'native-glass-button-settings' : 'glass-bar-settings',
+      ),
+      title: native ? (button ? '选中按钮' : '底栏') : '玻璃',
+      showPreview: !native,
+      value: button ? Pref.androidGlassButtonClarity : Pref.androidGlassClarity,
+      blurValue: button ? Pref.androidGlassButtonBlur : Pref.androidGlassBlur,
+      tint: button ? Pref.androidGlassButtonTint : Pref.androidGlassBarTint,
+      onChanged: (value) {
+        if (Get.isRegistered<MainController>()) {
+          final controller = Get.find<MainController>();
+          if (button) {
+            controller.androidGlassButtonClarity.value = value;
+          } else {
+            controller.androidGlassClarity.value = value;
+          }
+        }
+      },
+      onSaved: (value) => GStorage.setting.put(
+        button
+            ? SettingBoxKey.androidGlassButtonClarity
+            : SettingBoxKey.androidGlassClarity,
+        value,
+      ),
+      onBlurChanged: (value) {
+        if (Get.isRegistered<MainController>()) {
+          final controller = Get.find<MainController>();
+          if (button) {
+            controller.androidGlassButtonBlur.value = value;
+          } else {
+            controller.androidGlassBlur.value = value;
+          }
+        }
+      },
+      onBlurSaved: (value) => GStorage.setting.put(
+        button
+            ? SettingBoxKey.androidGlassButtonBlur
+            : SettingBoxKey.androidGlassBlur,
+        value,
+      ),
+      onTintChanged: !native
+          ? null
+          : (value) {
+              if (Get.isRegistered<MainController>()) {
+                final controller = Get.find<MainController>();
+                if (button) {
+                  controller.androidGlassButtonTint.value = value;
+                } else {
+                  controller.androidGlassBarTint.value = value;
+                }
+              }
+              GStorage.setting.put(
+                button
+                    ? SettingBoxKey.androidGlassButtonTint
+                    : SettingBoxKey.androidGlassBarTint,
+                value.name,
+              );
+            },
+    );
+  }
+
+  Widget buildSettings(bool native) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (native)
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('底栏与选中按钮分别设置。通透程度调节材质底色，模糊程度调节背景细节；原有选中遮罩、高光与折射保留。'),
+        ),
+      controls(native: native),
+      if (native) ...[
+        const Divider(),
+        controls(native: true, button: true),
+      ],
+    ],
+  );
+
+  if (!Get.isRegistered<MainController>()) {
+    return buildSettings(Pref.androidNativeKyantNavigation);
+  }
+  return Obx(
+    () => buildSettings(
+      Get.find<MainController>().androidNativeKyantNavigation.value,
+    ),
+  );
+}
+
 List<SettingsModel> get styleSettings => [
   if (PlatformUtils.isDesktop) ...[
     const SwitchModel(
@@ -163,30 +253,9 @@ List<SettingsModel> get styleSettings => [
       },
     ),
   if (Platform.isAndroid && ui.ImageFilter.isShaderFilterSupported)
-    WidgetModel(
-      title: '玻璃通透程度',
-      builder: (_) => GlassClaritySetting(
-        value: Pref.androidGlassClarity,
-        blurValue: Pref.androidGlassBlur,
-        onBlurChanged: (value) {
-          if (Get.isRegistered<MainController>()) {
-            Get.find<MainController>().androidGlassBlur.value = value;
-          }
-        },
-        onBlurSaved: (value) => GStorage.setting.put(
-          SettingBoxKey.androidGlassBlur,
-          value,
-        ),
-        onChanged: (value) {
-          if (Get.isRegistered<MainController>()) {
-            Get.find<MainController>().androidGlassClarity.value = value;
-          }
-        },
-        onSaved: (value) => GStorage.setting.put(
-          SettingBoxKey.androidGlassClarity,
-          value,
-        ),
-      ),
+    const WidgetModel(
+      title: '玻璃材质设置',
+      builder: _buildGlassMaterialSettings,
     ),
   if (Platform.isAndroid)
     SwitchModel(

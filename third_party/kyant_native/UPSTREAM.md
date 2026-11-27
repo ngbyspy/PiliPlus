@@ -39,3 +39,16 @@ acknowledgement and one foreground scene. No r9 PressBackdrop, later button
 material/colour controls, alternate layer graph, clipping or scale compensation
 is active. N02 stays removed by the user's explicit choice. This is source-only;
 no compilation, package, device operation or new visual acceptance is claimed.
+
+
+2026-11-27 independent-control experiment (spy/dev only): expose the existing
+visible bar and hidden tab material's blur/opacity separately. Blur calls the
+library blur() directly (0..16dp); clarity changes existing tint alpha and is
+not one of the demo's five lens/shape parameters. Existing tint already uses
+#FAFAFA / #121212 and an inverse-theme 10% idle / black 3% pressed button shade.
+Automatic preserves these colours/alphas; White/Black recolour those existing
+surfaces independently. Selection shades retain their original strengths, even
+at 100% material clarity. No layer, clipping, press transform, lens/highlight,
+refraction/dispersion parameter or surface/lifecycle logic is reconstructed.
+Corner-radius customization was explicitly declined. The graph stays identical
+to accepted r13, whose source and APK remain the rollback baseline.

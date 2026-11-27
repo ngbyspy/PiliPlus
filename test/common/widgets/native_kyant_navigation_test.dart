@@ -1,4 +1,5 @@
 import 'package:PiliPlus/common/widgets/native_kyant_navigation.dart';
+import 'package:PiliPlus/utils/android/glass_appearance.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,12 +10,22 @@ void main() {
   final selections = <int>[];
   var supported = true;
   var blur = .5;
+  var clarity = .6;
+  var buttonClarity = .6;
+  var buttonBlur = .5;
+  var barTint = GlassTint.automatic;
+  var buttonTint = GlassTint.automatic;
   setUp(() {
     WidgetsBinding.instance.handleAppLifecycleStateChanged(
       AppLifecycleState.resumed,
     );
     supported = true;
     blur = .5;
+    clarity = .6;
+    buttonClarity = .6;
+    buttonBlur = .5;
+    barTint = GlassTint.automatic;
+    buttonTint = GlassTint.automatic;
     calls.clear();
     selections.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -36,8 +47,12 @@ void main() {
     selectedIndex: 0,
     onSelected: selections.add,
     fallback: const Text('original navigation'),
-    clarity: .6,
+    clarity: clarity,
     blur: blur,
+    buttonClarity: buttonClarity,
+    buttonBlur: buttonBlur,
+    barTint: barTint,
+    buttonTint: buttonTint,
   );
   Widget host(Widget child) => MaterialApp(
     navigatorObservers: [KyantNavigationRoutes.instance],
@@ -84,6 +99,10 @@ void main() {
       expect((config['items'] as List)[1]['badge'], '3');
       expect(config['opacity'], closeTo(.4, .0001));
       expect(config['blurRadius'], 8);
+      expect(config['buttonOpacity'], closeTo(.4, .0001));
+      expect(config['buttonBlurRadius'], 8);
+      expect(config['barTint'], 0);
+      expect(config['buttonTint'], 0);
       expect(find.text('original navigation'), findsNothing);
       await emit({'owner': -1, 'id': 'home'});
       expect(selections, isEmpty);
@@ -141,6 +160,42 @@ void main() {
     expect(config()['blurRadius'], 16);
     expect(config()['opacity'], closeTo(.4, .0001));
     expect(selections, isEmpty);
+    await close(tester);
+  });
+
+  testWidgets('bar and button settings reach native independently', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    Map config() =>
+        calls.lastWhere((c) => c.method == 'update').arguments as Map;
+    final owner = config()['owner'];
+    buttonClarity = 1;
+    buttonBlur = 0;
+    buttonTint = GlassTint.black;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['buttonOpacity'], 0);
+    expect(config()['buttonBlurRadius'], 0);
+    expect(config()['buttonTint'], 2);
+    expect(config()['opacity'], closeTo(.4, .0001));
+    expect(config()['blurRadius'], 8);
+    expect(config()['barTint'], 0);
+    clarity = .2;
+    blur = 1;
+    barTint = GlassTint.white;
+    await tester.pumpWidget(host(bar()));
+    await tester.pumpAndSettle();
+    expect(config()['opacity'], closeTo(.8, .0001));
+    expect(config()['blurRadius'], 16);
+    expect(config()['barTint'], 1);
+    expect(config()['buttonOpacity'], 0);
+    expect(config()['buttonBlurRadius'], 0);
+    expect(config()['buttonTint'], 2);
+    expect(config()['owner'], owner);
+    expect(selections, isEmpty);
+    expect(tester.binding.transientCallbackCount, 0);
     await close(tester);
   });
 

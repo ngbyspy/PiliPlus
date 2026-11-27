@@ -52,3 +52,9 @@ at 100% material clarity. No layer, clipping, press transform, lens/highlight,
 refraction/dispersion parameter or surface/lifecycle logic is reconstructed.
 Corner-radius customization was explicitly declined. The graph stays identical
 to accepted r13, whose source and APK remain the rollback baseline.
+
+
+2026-11-27: user accepted the independent material controls in the Android
+Release from fedd04d3589a575779d69d3c84260cffe1f34193. Promoted that exact
+source to spy/main (merge 46bbdbe76); no rendering changes or rebuild during
+promotion. iOS27 Clear appearance comparison is a separate research task.
